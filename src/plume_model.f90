@@ -11,7 +11,7 @@
 !> particle size distribution along the eruptive column.
 !> Version 1.0:\n
 !> 
-!> Github project page: http://http://demichie.github.io/PLUME-MoM/
+!> Github project page: http://demichie.github.io/PLUME-MoM/
 !> \n
 !> \author Mattia de' Michieli Vitturi (*) \n
 !> (*) Istituto Nazionale di Geofisica e vulcanologia, sezione di Pisa\n
