@@ -1,7 +1,7 @@
 !********************************************************************************
-!> \mainpage   PlumeMoM  
-!> PlumeMoM is a numerical code for the steady-state plume model, describing the 
-!> rise in the atmosphere of a mixture of gas and volcanic ash during an  
+!> \mainpage   PLUME-MoM  
+!> PLUME-MoM is a numerical code for the steady-state plume model, describing  
+!> the rise in the atmosphere of a mixture of gas and volcanic ash during an  
 !> eruption. The system of equation is formally the same of that presented in 
 !> Barsotti et al. 2008, i.e. the equations we formulate describe the same 
 !> conservation principles (conservation of mass, momentum and energy).
@@ -11,6 +11,8 @@
 !> particle size distribution along the eruptive column.
 !> Version 1.0:\n
 !> 
+!> Github project page: http://http://demichie.github.io/PLUME-MoM/
+!> \n
 !> \author Mattia de' Michieli Vitturi (*) \n
 !> (*) Istituto Nazionale di Geofisica e vulcanologia, sezione di Pisa\n
 !>     Via della Faggiola, 36\n
