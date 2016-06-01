@@ -8,7 +8,8 @@ make
 make install
 
 
-The executable is copied in the bin folder
+The executable is copied in the bin folder.
+
 To test the code copy the executable from the bin folder in the EXAMPLES folder and:
 
 ./PLUMEMoM
