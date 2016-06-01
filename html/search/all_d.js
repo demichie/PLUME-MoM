@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['plumemom',['PlumeMoM',['../index.html',1,'']]],
+  ['plume_2dmom',['PLUME-MoM',['../index.html',1,'']]],
   ['p0',['p0',['../classmeteo__module.html#a82a2ee491f1c3db219ac06a183e059af',1,'meteo_module']]],
   ['pa',['pa',['../classmeteo__module.html#a6ec088f472f4bfe00e9b3c9800241090',1,'meteo_module']]],
   ['particles_2ef90',['particles.f90',['../particles_8f90.html',1,'']]],

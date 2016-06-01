@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['plumemom',['PlumeMoM',['../index.html',1,'']]]
+  ['plume_2dmom',['PLUME-MoM',['../index.html',1,'']]]
 ];
