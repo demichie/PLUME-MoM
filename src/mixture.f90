@@ -264,8 +264,12 @@ CONTAINS
     ! ... At the beginning the plume is a mixture of water-vapour and particles
     ! ... only (without entrained air)
 
-    WRITE(*,*) 'cp_rhop_mom',cp_rhop_mom(:,3)
-    WRITE(*,*) 'rhop_mom',rhop_mom(:,3)
+    IF ( verbose_level .GE. 1 ) THEN
+
+       WRITE(*,*) 'cp_rhop_mom',cp_rhop_mom(:,3)
+       WRITE(*,*) 'rhop_mom',rhop_mom(:,3)
+
+    END IF
 
     cp_solid0 = SUM(solid_partial_mass_fraction * cp_rhop_mom(:,3) /            &
          rhop_mom(:,3) )
