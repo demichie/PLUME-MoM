@@ -316,6 +316,8 @@ CONTAINS
        WRITE(*,*) 'rho_gas',rho_gas
        WRITE(*,*) 'rho_mix',rho_mix
        WRITE(*,*) 'mass_flow_rate',mass_flow_rate
+       WRITE(*,*) 'solid_mass_flow_rates',mass_flow_rate *                      &
+            ( 1.D0 - gas_mass_fraction ) * solid_partial_mass_fraction(1:n_part)
        
        READ(*,*)
 

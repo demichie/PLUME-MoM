@@ -81,6 +81,11 @@ MODULE inpout
   !> hysplit data unit
   INTEGER :: hy_unit
 
+  INTEGER :: hy_lines
+
+  !> hysplit scratch unit
+  INTEGER :: temp_unit
+
   !> Moments values along the column data unit
   INTEGER :: mom_unit
 
@@ -94,7 +99,8 @@ MODULE inpout
 
   REAL*8 :: hy_deltaz , hy_z , hy_z_old , hy_x , hy_y , hy_x_old , hy_y_old 
 
-  REAL*8, ALLOCATABLE :: solid_mfr(:) , solid_mfr_old(:)
+  REAL*8, ALLOCATABLE :: solid_mfr(:) , solid_mfr_old(:), solid_mfr_init(:) ,   &
+        solid_mfr_oldold(:)
 
   NAMELIST / control_parameters / run_name , verbose_level , dakota_flag ,      &
         inversion_flag , hysplit_flag
@@ -115,7 +121,9 @@ MODULE inpout
   NAMELIST / initial_values / r0 , w0 , mfr_exp0 , tp0 ,                        &
        initial_neutral_density , gas_mass_fraction0 , vent_height , ds0 ,       &
        n_part , distribution , distribution_variable , n_mom
-  
+ 
+  NAMELIST / hysplit_parameters / hy_deltaz , nbl_stop
+ 
   NAMELIST / mixture_parameters / diam1 , rho1 , diam2 , rho2 , cp_part ,       &
        rwvapour , cpwvapour
   
@@ -374,8 +382,6 @@ CONTAINS
 
     NAMELIST / constant_parameters / solid_partial_mass_fraction ,              &
          diam_constant_phi
-
-    NAMELIST / hysplit_parameters / hy_deltaz 
 
     WRITE(*,*) 'PLUME_MODEL: *** Starting the run ***' 
 
@@ -987,12 +993,13 @@ CONTAINS
 
     IF ( SUM( solid_partial_mass_fraction(1:n_part) ) .NE. 1.D0 ) THEN
 
-       WRITE(*,*) 'WARNING: Sum of solid mass fractions > 1'
+       WRITE(*,*) 'WARNING: Sum of solid mass fractions :',                     &
+            SUM( solid_partial_mass_fraction(1:n_part) )
 
     END IF
 
-    solid_partial_mass_fraction(n_part) = 1.D0 -                                &
-         SUM( solid_partial_mass_fraction(1:n_part-1) )
+    solid_partial_mass_fraction(1:n_part)=solid_partial_mass_fraction(1:n_part) &
+         / SUM( solid_partial_mass_fraction(1:n_part) )
 
     solid_mass_fraction(1:n_part) = ( 1.d0 - gas_mass_fraction0 ) *             &
           solid_partial_mass_fraction(1:n_part)
@@ -1386,6 +1393,13 @@ CONTAINS
 
     WRITE(bak_unit, initial_values)
 
+    IF ( hysplit_flag ) THEN
+
+       WRITE(bak_unit, hysplit_parameters)
+              
+    END IF
+
+
     WRITE(bak_unit, mixture_parameters)
 
     IF ( distribution .EQ. 'beta' ) THEN
@@ -1636,31 +1650,61 @@ CONTAINS
   !> Mattia de' Michieli Vitturi
   !******************************************************************************
 
-  SUBROUTINE write_hysplit(last)
+  SUBROUTINE write_hysplit(x,y,z,last)
 
     USE meteo_module, ONLY: rho_atm , ta, pa
 
     USE particles_module, ONLY: n_mom , n_part , solid_partial_mass_fraction , &
          mom
 
-    USE plume_module, ONLY: x , y , z , w , r , mag_u
+    USE plume_module, ONLY: w , r , mag_u
     USE mixture_module, ONLY: rho_mix , tp , gas_mass_fraction ,               &
          atm_mass_fraction , wvapour_mass_fraction
 
 
     IMPLICIT NONE
+    
+    REAL*8, INTENT(IN) :: x,y,z
 
     LOGICAL, INTENT(IN) :: LAST
 
-    INTEGER :: i_part
+    INTEGER :: i_part ,i
+
+    INTEGER :: IOstatus
 
     CHARACTER(len=8) :: x1 ! format descriptor
 
+    REAL*8 :: xtemp,ytemp,ztemp
+    REAL*8 :: xold,yold,zold
+    REAL*8 :: xnew,ynew,znew
+
+    REAL*8, ALLOCATABLE :: solid_temp(:)
+
+    INTEGER :: nbl_lines
 
     IF ( z .EQ. vent_height ) THEN
-       
+
+       hy_lines = 0
+  
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) *  ( 1.D0 -   &
             gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
+
+       IF ( nbl_stop ) THEN
+
+          ALLOCATE( solid_mfr_init(1:n_part) ) 
+          ALLOCATE( solid_mfr_oldold(1:n_part) ) 
+
+          solid_mfr_init(1:n_part) = solid_mfr(1:n_part)
+          xold = x
+          yold = y
+
+          n_unit = n_unit + 1
+          temp_unit = n_unit
+          OPEN(temp_unit, status='SCRATCH' )
+
+       END IF
+
+       WRITE(*,*) 'Solid mass flow rate: ',solid_mfr(1:n_part)
 
        WRITE(hy_unit,107,advance="no")
        
@@ -1676,6 +1720,8 @@ CONTAINS
       
     ELSEIF ( z .GE. hy_z ) THEN
        
+       hy_lines = hy_lines + 1
+
        solid_mfr_old(1:n_part) = solid_mfr(1:n_part)
        
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
@@ -1684,9 +1730,6 @@ CONTAINS
        WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) , 0.5D0 * ( hy_y +  hy_y_old ) , &
             0.5D0 * ( hy_z +  hy_z_old ) , solid_mfr_old(1:n_part)              &
             - solid_mfr(1:n_part)
-   
-!       WRITE(*,*) solid_partial_mass_fraction(1:n_part) 
-!       WRITE(*,*) z, ( 1.D0 - gas_mass_fraction) * rho_mix * ( pi_g * r**2.D0 ) * mag_u
    
        hy_x_old = hy_x
        hy_y_old = hy_y
@@ -1700,18 +1743,110 @@ CONTAINS
     
     IF ( last ) THEN
 
-       solid_mfr_old(1:n_part) = solid_mfr(1:n_part)
+       IF ( ( nbl_stop ) .AND. ( z .LT. hy_z_old ) ) THEN
+
+          ALLOCATE( solid_temp(1:n_part) )
+
+          REWIND(hy_unit)
+          READ(hy_unit,*) 
+
+          solid_mfr_old(1:n_part) = solid_mfr_init(1:n_part)
+
+          nbl_lines = -1
+          
+          READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+
+          nbl_lines = nbl_lines + 1
+          
+          xnew = 2.D0 * xtemp - xold
+          ynew = 2.D0 * ytemp - yold
+          znew = ztemp - 0.5D0 * hy_deltaz
+          
+          solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
+          solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
+          
+          DO WHILE ( ( ztemp .LT. z ) .AND. ( nbl_lines + 1 < hy_lines ) )
+             
+             READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+
+             xold = xnew
+             yold = ynew
+             zold = znew
+             
+             nbl_lines = nbl_lines + 1
+             
+             xnew = 2.D0 * xtemp - xold
+             ynew = 2.D0 * ytemp - yold
+             znew = ztemp - 0.5D0 * hy_deltaz
+
+             solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
+             solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
+ 
+
+          END DO
+
+          hy_x_old = xnew 
+          hy_y_old = ynew 
+          hy_z_old = znew
+
+          solid_mfr_old(1:n_part) = solid_mfr_oldold(1:n_part)
+
+          REWIND(hy_unit)
+          READ(hy_unit,*) 
+
+          DO i = 1,nbl_lines
+
+             READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+             WRITE(temp_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+
+          END DO
+
+          REWIND(temp_unit)                     ! back to the beginning of SCRATCH
+
+          CLOSE(hy_unit, STATUS = 'DELETE' )   ! delete original
+
+          OPEN(hy_unit,FILE=hy_file)
+
+          WRITE(hy_unit,107,advance="no")
+          
+          DO i_part=1,n_part
+             
+             WRITE(x1,'(I2.2)') i_part ! converting integer to string using a 'internal file'
+             
+             WRITE(hy_unit,108,advance="no") 'S mfr'//trim(x1)//' (kg/s)'
+             
+          END DO
+          
+          WRITE(hy_unit,*) ''
        
+          DO i = 1,nbl_lines
+
+             READ(temp_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+             WRITE(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
+
+          END DO
+ 
+          CLOSE(temp_unit, STATUS = 'DELETE')                      ! delete
+
+
+       ELSE
+
+          solid_mfr_old(1:n_part) = solid_mfr(1:n_part)
+          
+       END IF
+
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
             gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
-
+       
        hy_x = x
        hy_y = y
        hy_z = z
-
+       
        WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) , 0.5D0 * ( hy_y +       &
             hy_y_old ) , 0.5D0 * ( hy_z +  hy_z_old ) , solid_mfr_old(1:n_part) &
             - solid_mfr(1:n_part)
+       
+       WRITE(hy_unit,110) hy_x , hy_y , hy_z , solid_mfr(1:n_part)
        
     END IF
 

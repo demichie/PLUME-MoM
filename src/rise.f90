@@ -33,11 +33,11 @@ CONTAINS
     USE particles_module, ONLY : n_part , mom0 , mom
     USE particles_module, ONLY : distribution_variable
     USE particles_module, ONLY : solid_partial_mass_fraction
-    USE plume_module, ONLY: s , w , z , vent_height , r , mag_u
+    USE plume_module, ONLY: s , w , x , y , z , vent_height , r , mag_u
     USE solver_module, ONLY: ds, ds0, f, ftemp, rhs, rhstemp
     USE solver_module, ONLY: f_stepold
-    USE variables, ONLY : verbose_level
-    USE variables, ONLY : dakota_flag , hysplit_flag
+    USE variables, ONLY : verbose_level , inversion_flag
+    USE variables, ONLY : dakota_flag , hysplit_flag , nbl_stop
     USE variables, ONLY : pi_g
     USE variables, ONLY : height_weight , height_obj , mu_weight ,    &
        mu_obj , sigma_weight , sigma_obj , skew_weight , skew_obj
@@ -97,7 +97,7 @@ CONTAINS
     REAL*8 :: delta_rho
 
     REAL*8 :: plume_height
-    REAL*8 :: height_nbl       
+    REAL*8 :: x_nbl , y_nbl , height_nbl       
     REAL*8 :: deltarho_min
     REAL*8 :: rho_nbl
 
@@ -253,7 +253,7 @@ CONTAINS
 
     IF ( .NOT.dakota_flag ) CALL write_column
 
-    IF ( hysplit_flag ) CALL write_hysplit(.FALSE.)
+    IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
 
     deltarho_min = 1000.D0
 
@@ -356,7 +356,9 @@ CONTAINS
 
              rho_nbl = rho_mix
              height_nbl = z - vent_height
-
+             x_nbl = x
+             y_nbl = y
+             
           END IF
 
           s = s + ds
@@ -377,7 +379,7 @@ CONTAINS
 
           IF ( .NOT.dakota_flag ) CALL write_column
 
-          IF ( hysplit_flag ) CALL write_hysplit(.FALSE.)
+          IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
 
           ! ... Exit condition
 
@@ -391,8 +393,20 @@ CONTAINS
 
     END DO main_loop
 
-    IF ( hysplit_flag ) CALL write_hysplit(.TRUE.)
+    IF ( hysplit_flag ) THEN
 
+       IF ( nbl_stop ) THEN
+          
+          CALL write_hysplit(x_nbl,y_nbl,vent_height+height_nbl,.TRUE.)
+          
+       ELSE
+
+          
+          CALL write_hysplit(x,y,z,.TRUE.)
+          
+       END IF
+       
+    END IF
 
     max_idx = idx
 
@@ -412,48 +426,21 @@ CONTAINS
     first_der_left(1:max_idx-2) = ( z_norm(2:max_idx-1) - z_norm(1:max_idx-2) ) &
          / ( w_norm(2:max_idx-1) - w_norm(1:max_idx-2) )
 
-    sec_der(1:max_idx-2) = ( first_der_right(1:max_idx-2) - first_der_left(1:max_idx-2) ) &
-         / ( 0.5 * ( w_norm(3:max_idx) - w_norm(1:max_idx-2 ) ) )
+    sec_der(1:max_idx-2) = ( first_der_right(1:max_idx-2) -                     &
+         first_der_left(1:max_idx-2) ) / ( 0.5 * ( w_norm(3:max_idx) -          &
+         w_norm(1:max_idx-2 ) ) )
 
-    first_der_central = ( z_norm(3:max_idx) - z_norm(1:max_idx-2) )  &
+    first_der_central = ( z_norm(3:max_idx) - z_norm(1:max_idx-2) )             &
          / ( w_norm(3:max_idx) - w_norm(1:max_idx-2) )
 
-    k(1:max_idx-2) = sec_der(1:max_idx-2) / ( ( 1.0 + first_der_central(1:max_idx-2)**2 )**(1.5d0) )
+    k(1:max_idx-2) = sec_der(1:max_idx-2) / ( ( 1.0 +                           &
+         first_der_central(1:max_idx-2)**2 )**(1.5d0) )
 
     k_max = MAXVAL( k(1:max_idx-2) )
 
     check_sb = ( w_maxrel - w_minrel ) / w_maxabs
 
     eps_sb = 0.05
-
-!!$    IF ( check_sb .GT. eps_sb ) THEN
-!!$
-!!$       WRITE(*,*) 'w_minrel,w_maxrel,w_maxabs',w_minrel,w_maxrel,w_maxabs
-!!$
-!!$       WRITE(*,*) 'superbuoyant'
-!!$
-!!$       column_regime = 2
-!!$
-!!$    ELSE
-!!$
-!!$       WRITE(*,*) 'k_max',k_max
-!!$
-!!$       IF ( k_max < 1.d0 ) THEN
-!!$
-!!$          WRITE(*,*) 'collapsing'
-!!$
-!!$          column_regime = 3
-!!$
-!!$       ELSE
-!!$
-!!$          WRITE(*,*) 'buoyant'
-!!$
-!!$          column_regime = 1
-!!$
-!!$       END IF
-
-
-       ! modified criterium for collapsing
 
     IF ( delta_rho .GT. 0.d0 ) THEN
        
@@ -480,7 +467,6 @@ CONTAINS
        END IF
           
     END IF
-
 
     description = 'Column regime'
     
@@ -556,21 +542,27 @@ CONTAINS
             
     END DO
 
-    description = 'Objective_function'
+    IF ( inversion_flag ) THEN
+       
+       description = 'Objective_function'
     
-    obj_function = mu_weight * ( ( mu_phi-mu_obj ) /                            &
-         MAX( ABS(mu_phi),ABS(mu_obj) ) )**2                                    &
-         + sigma_weight * ( ( sigma_phi-sigma_obj ) /                           &
-         MAX( ABS(sigma_phi),ABS(sigma_obj) ) )**2                              &
-         + skew_weight * ( ( skew_phi-skew_obj ) /                              &
-         MAX( ABS(skew_phi),ABS(skew_obj) ) )**2                                &
-         + height_weight * ( ( plume_height-height_obj ) /                      &
-         MAX( ABS(plume_height),ABS(height_obj) ) )**2      
+       obj_function = mu_weight * ( ( mu_phi-mu_obj ) /                         &
+            MAX( ABS(mu_phi),ABS(mu_obj) ) )**2                                 &
+            + sigma_weight * ( ( sigma_phi-sigma_obj ) /                        &
+            MAX( ABS(sigma_phi),ABS(sigma_obj) ) )**2                           &
+            + skew_weight * ( ( skew_phi-skew_obj ) /                           &
+            MAX( ABS(skew_phi),ABS(skew_obj) ) )**2                             &
+            + height_weight * ( ( plume_height-height_obj ) /                   &
+            MAX( ABS(plume_height),ABS(height_obj) ) )**2      
+       
+       CALL WRITE_DAKOTA(description,obj_function)
+       
 
-    CALL WRITE_DAKOTA(description,obj_function)
-    
-    WRITE(*,*) 'plume_height,obj_function' , plume_height , obj_function
-    WRITE(*,*) 'height_nbl',height_nbl
+       WRITE(*,*) 'plume_height,obj_function' , plume_height , obj_function
+
+    END IF
+
+    WRITE(*,*) 'neutral buoyance level height = ',height_nbl
 
 
     RETURN

@@ -26,6 +26,12 @@ MODULE variables
   !> Flag for hysplit run 
   LOGICAL :: hysplit_flag
 
+  !> Flag for hysplit output\n
+  !> - '.TRUE.'          => last point of emission at neutral bouyancy level
+  !> - '.FALSE.'         => last point of emission at maximum plume height
+  !> .
+  LOGICAL :: nbl_stop
+
   !> Maximum number of particle phases
   INTEGER, PARAMETER :: max_n_part = 50
 
