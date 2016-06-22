@@ -1,5 +1,5 @@
 hysplit_dir = "/home/demichie/Codes/hysplit"
-
+plumemom_dir = "/home/demichie/Codes/PLUME_MoM"
 runname = 'Eya2010'
 starttime="10 04 14 00 00" # Year,month,day,hour,minute
 endtime = "10 04 14 12 00"

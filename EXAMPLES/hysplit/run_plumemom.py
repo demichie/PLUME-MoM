@@ -92,7 +92,7 @@ for i in range(n_runs):
                     outfile.write(line)
 
 
-    subprocess.call("./PLUMEMoM", shell=True) 
+    subprocess.call(plumemom_dir+"/bin/PLUMEMoM", shell=True) 
 
 subprocess.call("rm plume_model.temp1", shell=True) 
 subprocess.call("rm plume_model.temp2", shell=True) 
