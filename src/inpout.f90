@@ -1727,9 +1727,9 @@ CONTAINS
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
             gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
        
-       WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) , 0.5D0 * ( hy_y +  hy_y_old ) , &
-            0.5D0 * ( hy_z +  hy_z_old ) , solid_mfr_old(1:n_part)              &
-            - solid_mfr(1:n_part)
+       WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) ,                        &
+            0.5D0 * ( hy_y +  hy_y_old ) , 0.5D0 * ( hy_z +  hy_z_old ) ,       &
+            solid_mfr_old(1:n_part) - solid_mfr(1:n_part)
    
        hy_x_old = hy_x
        hy_y_old = hy_y
@@ -1761,29 +1761,40 @@ CONTAINS
           xnew = 2.D0 * xtemp - xold
           ynew = 2.D0 * ytemp - yold
           znew = ztemp - 0.5D0 * hy_deltaz
-          
+      
+          WRITE(*,*) 'ztemp,znew,z',ztemp,znew,z
+    
           solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
           solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
           
-          DO WHILE ( ( ztemp .LT. z ) .AND. ( nbl_lines + 1 < hy_lines ) )
+          nbl_loop:DO WHILE ( ( znew .LT. z ) .AND. ( nbl_lines + 1 < hy_lines ) )
              
              READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-
+             
              xold = xnew
              yold = ynew
              zold = znew
+            
+             IF  ( z .GT. ztemp - 0.5D0 * hy_deltaz ) THEN
+                
+                nbl_lines = nbl_lines + 1
+    
+                xnew = 2.D0 * xtemp - xold
+                ynew = 2.D0 * ytemp - yold
+                znew = ztemp - 0.5D0 * hy_deltaz
+                
+                WRITE(*,*) 'ztemp,znew,z',ztemp,znew,z
+                
+                solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
+                solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
              
-             nbl_lines = nbl_lines + 1
+             ELSE
+                
+                EXIT nbl_loop
+                
+             END IF
              
-             xnew = 2.D0 * xtemp - xold
-             ynew = 2.D0 * ytemp - yold
-             znew = ztemp - 0.5D0 * hy_deltaz
-
-             solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
-             solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
- 
-
-          END DO
+          END DO nbl_loop
 
           hy_x_old = xnew 
           hy_y_old = ynew 

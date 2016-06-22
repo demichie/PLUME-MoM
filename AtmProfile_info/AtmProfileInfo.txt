@@ -1,0 +1,3 @@
+Data from K.S.W. Champion, A.E. Cole, and A.J. Kantor 'Standard and Reference Atmospheres'
+Altitude in km, temperature in K, density kg/m3, pressure mb (equivalent to hPa)
+Latitudes are North
