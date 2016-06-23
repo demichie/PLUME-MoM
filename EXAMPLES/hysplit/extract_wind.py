@@ -86,7 +86,7 @@ def write_atm(time_input):
 
     run_path = './'
 
-    profile = os.path.join(hysplit_dir,'trunk','exec','profile')
+    profile = os.path.join(hysplit_dir,'exec','profile')
 
     subprocess.call(profile+" -d"+run_path+" -fapr1420.bin -y"
                     +str(lat)+" -x"+str(lon)+" -o0 -p00", shell=True) # wind profile at vent position at the beginnig of the wind file

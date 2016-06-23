@@ -27,7 +27,7 @@ with open('ASCDATA.CFG','w') as ascdata:
     ascdata.write('180     360 \n')
     ascdata.write('2 \n')
     ascdata.write('0.2 \n')
-    ascdata.write("'"+hysplit_dir+"/trunk/bdyfiles/'\n")
+    ascdata.write("'"+hysplit_dir+"/bdyfiles/'\n")
 ascdata.close()
 
 

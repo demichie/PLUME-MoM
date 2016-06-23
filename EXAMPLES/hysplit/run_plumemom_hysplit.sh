@@ -8,7 +8,7 @@ result=$(grep -i 'hysplit_dir' input_file.py | cut -c 15-)
 temp="${result%\"}"
 result="${temp#\"}"
 
-MDL="$result/trunk"
+MDL="$result"
 
 #----------------------------------------------------------
 
