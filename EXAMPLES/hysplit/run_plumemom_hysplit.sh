@@ -7,8 +7,20 @@ result=$(grep -i 'hysplit_dir' input_file.py | cut -c 15-)
 
 temp="${result%\"}"
 result="${temp#\"}"
+temp="${result%\'}"
+result="${temp#\'}"
 
 MDL="$result"
+
+result=$(grep -i 'runname' input_file.py | cut -c 11-)
+
+temp="${result%\"}"
+result="${temp#\"}"
+
+temp="${result%\'}"
+result="${temp#\'}"
+
+DUMP="cdump_$result"
 
 #----------------------------------------------------------
 
@@ -25,7 +37,7 @@ echo "'TITLE&','### $0 ### &'" >LABELS.CFG
 ${MDL}/exec/parxplot -iPARDUMP -k1 -z80 -j${MDL}/graphics/arlmap
 evince parxplot.ps
   
-${MDL}/exec/concplot -icdump_Eya2010 -j${MDL}/graphics/arlmap -s0 -z80
+${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1
 
 evince concplot.ps
 
