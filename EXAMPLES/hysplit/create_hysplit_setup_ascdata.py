@@ -14,6 +14,7 @@ with open('SETUP.CFG','w') as setup:
     setup.write('ninit='+str(ninit)+'\n')
     setup.write('ndump='+str(ndump)+'\n')
     setup.write('ncycl='+str(ncycl)+'\n')
+    setup.write('delt='+str(delt)+'\n')
     setup.write("efile = 'EMITIMES', \n")
     setup.write('numpar='+str(numpar)+'\n')
     setup.write('maxpar='+str(maxpar)+'\n')

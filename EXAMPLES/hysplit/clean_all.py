@@ -39,15 +39,14 @@ filelist = glob.glob('*~')
 for f in filelist:
     os.remove(f)
 
-                              
-os.remove('EMITIMES')
-os.remove('MESSAGE')
-os.remove('PARDUMP')
-os.remove('WARNING')
-os.remove('CONTROL')
-os.remove('STARTUP')
-os.remove('VMSDIST')                                                         
-                       
+
+filelist = [ 'EMITIMES' , 'MESSAGE' , 'PARDUMP' , 'WARNING' , 'CONTROL' , 'STARTUP' , 'VMSDIST' ]
+
+for f in filelist:
+    try:
+        os.remove(f)
+    except OSError:
+        pass
                        
      
 

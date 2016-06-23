@@ -10,18 +10,26 @@ from input_file import *
 time_format = "%y %m %d %H %M"
 
 # compute the total simulation time
-runtime = datetime.datetime.strptime(endtime,time_format) - datetime.datetime.strptime(starttime,time_format)
+runtime = datetime.datetime.strptime(endruntime,time_format) - datetime.datetime.strptime(starttime,time_format)
 
 d = datetime.datetime(2000,1,1) + runtime
-runtime_hh = '{0:02}'.format(int(str(d.strftime("%H"))))
+runtime_hh = '{0:02}'.format( int(runtime.total_seconds()//3600) )
+
+print 'Start time:',starttime
+print 'End run time:',endruntime
+print 'Total runtime',runtime_hh,'hrs'
 
 # compute the number of plumemom runs to do
-n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) )
+emittime = datetime.datetime.strptime(endemittime,time_format) - datetime.datetime.strptime(starttime,time_format)
+
+n_runs = np.int(np.floor( emittime.total_seconds() / deltat_plumemom ) )
 
 d = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 duration_hhmm = str(d.strftime("%H%M"))
 
-duration_hhhh = '{0:04}'.format(int(str(d.strftime("%H"))))
+d2 = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom+3600)
+
+duration_hhhh = '{0:04}'.format(int(str(d2.strftime("%H"))))
 
 diam = 2**(-np.asarray(diam_phi))
 
@@ -167,7 +175,7 @@ file_control.writelines('2\n')
 file_control.writelines('0 15000\n')
 file_control.writelines(starttime+'\n')
 file_control.writelines('00 00 00 00 00\n')
-file_control.writelines('1 1 0\n')
+file_control.writelines('0 12 0\n')  # first 0: deposit integrated
 file_control.writelines('%d\n'%npart)
 for i in range(npart):
     file_control.writelines('%f %f %f \n'%(diam[i],density[i],shapefactor[i]))#50.0 6.0 1.0

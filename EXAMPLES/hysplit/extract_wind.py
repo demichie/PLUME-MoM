@@ -88,7 +88,7 @@ def write_atm(time_input):
 
     profile = os.path.join(hysplit_dir,'exec','profile')
 
-    subprocess.call(profile+" -d"+run_path+" -fapr1420.bin -y"
+    subprocess.call(profile+" -d"+run_path+" -f"+meteo_file+" -y"
                     +str(lat)+" -x"+str(lon)+" -o0 -p00", shell=True) # wind profile at vent position at the beginnig of the wind file
 
     with open("profile_00.txt","r") as file1:

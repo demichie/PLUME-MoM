@@ -52,7 +52,7 @@ f.close()
 time_format = "%y %m %d %H %M"
 
 # compute the total simulation time
-runtime = datetime.datetime.strptime(endtime,time_format) - datetime.datetime.strptime(starttime,time_format)
+runtime = datetime.datetime.strptime(endemittime,time_format) - datetime.datetime.strptime(starttime,time_format)
 
 # compute the number of plumemom runs to do
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) )
