@@ -1651,6 +1651,11 @@ CONTAINS
     IF ( z .EQ. vent_height ) THEN
 
        hy_lines = 0
+
+       hy_x_old = x
+       hy_y_old = y
+       hy_z_old = z
+
   
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) *  ( 1.D0 -   &
             gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
@@ -1691,10 +1696,10 @@ CONTAINS
        solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
             gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
        
-       WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) ,                        &
-            0.5D0 * ( hy_y +  hy_y_old ) , 0.5D0 * ( hy_z +  hy_z_old ) ,       &
+       WRITE(hy_unit,110) 0.5D0 * ( x +  hy_x_old ) ,                           &
+            0.5D0 * ( y +  hy_y_old ) , 0.5D0 * ( z +  hy_z_old ) ,             &
             solid_mfr_old(1:n_part) - solid_mfr(1:n_part)
-   
+
        hy_x_old = hy_x
        hy_y_old = hy_y
        hy_z_old = hy_z
