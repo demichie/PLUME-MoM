@@ -9,6 +9,7 @@ from input_file import *
 
 with open('SETUP.CFG','w') as setup:
     setup.write('&SETUP  \n')
+    setup.write('initd='+str(initd)+'\n')
     setup.write('kmsl='+str(kmsl)+'\n')
     setup.write('ninit='+str(ninit)+'\n')
     setup.write('ndump='+str(ndump)+'\n')

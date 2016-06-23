@@ -1,5 +1,5 @@
-hysplit_dir = "/home/demichie/Codes/hysplit/trunk"
-plumemom_dir = "/home/demichie/Codes/PLUME_MoM"
+hysplit_dir = "/home/federica/hysplit/trunk"
+plumemom_dir = "/home/federica/demichie-PLUME-MoM-6b7ae62"
 runname = 'Eya2010'
 starttime="10 04 14 00 00" # Year,month,day,hour,minute
 endtime = "10 04 14 12 00"
@@ -17,12 +17,14 @@ vent_height = 3000.0
 deltaz_release = 500.0
 
 # setup.cfg parameters
-kmsl=0
-ninit=1
-ndump=1
-ncycl=1
-numpar = 200
-maxpar = 50000
+kmsl=0  #starting heights default to AGL=0 or MSL=1
+ninit=1  #particle initialization(0-none; 1-once; 2-add; 3-replace)
+ndump=1  #dump particles to/from file 0-none or nhrs-output intervall
+ncycl=1 # pardump output cycle time
+numpar = -200 # number of puffs or particles to released per cycle
+maxpar = 50000 # maximum number of particles carried in simulation
+initd = 3 # initial distribution, particle, puff, or combination
+
 # particles parameters
 npart = 10
 diam1 = 8.0E-6

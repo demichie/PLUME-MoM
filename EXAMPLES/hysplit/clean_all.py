@@ -1,26 +1,52 @@
-import subprocess
+import glob, os
 from input_file import *
 
-subprocess.call('rm '+runname+'**', shell=True)
-subprocess.call('rm atm**', shell=True)
-subprocess.call('rm cdump**', shell=True)
-subprocess.call('rm **.CFG', shell=True)
-subprocess.call('rm **.ps', shell=True)
-subprocess.call('rm **.inp', shell=True)
-subprocess.call('rm **.pyc', shell=True)
-subprocess.call('rm EMITIMES', shell=True)
-subprocess.call('rm MESSAGE', shell=True)
-subprocess.call('rm PARDUMP', shell=True)
-subprocess.call('rm WARNING', shell=True)
-subprocess.call('rm CONTROL', shell=True)
-subprocess.call('rm STARTUP', shell=True)
-subprocess.call('rm VMSDIST', shell=True)
-subprocess.call('rm **~', shell=True)
+filelist = glob.glob(runname+'*')
+for f in filelist:
+    os.remove(f)
 
 
+filelist = glob.glob('atm*')
+for f in filelist:
+    os.remove(f)
+
+
+filelist = glob.glob('cdump*')
+for f in filelist:
+    os.remove(f)
+
+
+filelist = glob.glob('*.CFG')
+for f in filelist:
+    os.remove(f)
+
+
+filelist = glob.glob('*.ps')
+for f in filelist:
+    os.remove(f)
+
+
+filelist = glob.glob('*.inp')
+for f in filelist:
+    os.remove(f)
+
+
+filelist = glob.glob('*.pyc')
+for f in filelist:
+    os.remove(f)
+
+filelist = glob.glob('*~')
+for f in filelist:
+    os.remove(f)
 
                               
-                                                         
+os.remove('EMITIMES')
+os.remove('MESSAGE')
+os.remove('PARDUMP')
+os.remove('WARNING')
+os.remove('CONTROL')
+os.remove('STARTUP')
+os.remove('VMSDIST')                                                         
                        
                        
      
