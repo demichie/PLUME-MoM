@@ -256,6 +256,8 @@ CONTAINS
 
     ! start the correction loop
 
+    d = 0.D0
+
     DO WHILE ( ( check_corr ) .AND. ( iter .LT. iter_max ) )
 
        check_corr = .FALSE.
@@ -266,7 +268,7 @@ CONTAINS
 
        END DO
 
-       DO j = 2,n_mom+1
+       DO j = 2,n_mom
 
           DO i = 1,n_mom-j+1
 
@@ -310,6 +312,95 @@ CONTAINS
     END DO
 
   END SUBROUTINE moments_correction
+
+  !******************************************************************************
+  !> \brief Moments correction Wright
+  !
+  !> This subroutine compute uses the algorithm of McGraw for the correction of 
+  !> an unrealizable moment set. The subroutine first analyzes the moment set and
+  !> then, if it is unrealizable, identifies the moemnt that has to be changed 
+  !> the least to make the set realizable. 
+  !> Modified from Marchisio and Fox 2013
+  !> \param[in,out]    m       moments
+  !> \param[out]       iter    number of iterations required
+  !> \author Mattia de' Michieli Vitturi
+  !> \date 22/10/2013
+  !******************************************************************************
+
+  SUBROUTINE moments_correction_wright(m)
+
+    IMPLICIT NONE
+    
+    REAL*8, DIMENSION(:), INTENT(INOUT) :: m
+
+    INTEGER :: i,j
+
+    INTEGER :: k
+
+    REAL*8 :: mu , sigma_var
+
+    REAL*8, DIMENSION(n_mom) :: m1 , m2
+
+    i = 2
+    j = 3
+
+    ! calculate the corresponding mean and variance 
+
+    mu = (j/(i*j-i**2))*log(m(i+1)/m(1)) + (i/(i*j-j**2))*log(m(j+1)/m(1))
+    
+    sigma_var = ((2.0/(j**2))*log(m(j+1)/m(1))-(2.0/(i*j))*log(m(i+1)/m(1)))/(1.0-i/j)
+
+    if (sigma_var .LT. 0) then
+
+       sigma_var = 0.0
+    end if
+
+    ! calculate the new moments for the first distribution
+    
+    DO k=1,n_mom
+
+       m1(k) = m(1)*dexp((k-1.0)*mu+((k-1.0)**2*sigma_var)/2.0)
+
+    END DO
+
+
+    ! select the two additional moments to be used for the first log-normal
+
+    i=1
+    j=3
+	
+    ! calculate the corresponding mean and variance 
+
+    mu = (j/(i*j-i**2))*log(m(i+1)/m(1)) + (i/(i*j-j**2))*log(m(j+1)/m(1))
+
+    sigma_var = ((2.0/(j**2))*log(m(j+1)/m(1))-(2.0/(i*j))*log(m(i+1)/m(1)))/(1.0-i/j)
+
+    IF (sigma_var < 0) THEN
+
+       sigma_var = 0.0
+
+    END IF
+
+    ! calculate the new moments for the second distribution
+
+    DO k=1,n_mom
+    
+       m2(k) =  m(1)*exp((k-1.0)*mu+((k-1.0)**2*sigma_var)/2.0)
+
+    END DO
+
+    ! calculate the new set of moments from the arithmetic mean of the previous
+    ! two sets of moments
+    
+    DO k=1,n_mom
+
+       m(k) = (m1(k)+m2(k))/2.0
+
+    END DO
+   
+  END SUBROUTINE moments_correction_wright
+
+
 
   !******************************************************************************
   !> \brief Beta function

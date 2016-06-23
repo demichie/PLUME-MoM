@@ -1724,8 +1724,6 @@ CONTAINS
           
           znew = ztemp - 0.5D0 * hy_deltaz
       
-          WRITE(*,*) 'ztemp,znew,z',ztemp,znew,z
-    
           solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
           solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
           

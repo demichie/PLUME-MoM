@@ -428,6 +428,7 @@ CONTAINS
 
     USE meteo_module, ONLY : zmet
 
+    USE moments_module, ONLY : moments_correction_wright
     USE moments_module, ONLY : moments_correction, wheeler_algorithm 
  
     USE particles_module, ONLY : eval_particles_moments 
@@ -518,7 +519,15 @@ CONTAINS
 
        IF ( distribution_variable .EQ. 'particles_number' ) THEN
 
-          CALL moments_correction( f_(idx1:idx2) , iter )
+          IF ( distribution .EQ. 'constant' ) THEN
+
+             CALL moments_correction( f_(idx1:idx2) , iter )
+!             CALL moments_correction_wright( f_(idx1:idx2) )
+          ELSE
+
+             CALL moments_correction( f_(idx1:idx2) , iter )
+
+          END IF
 
        END IF
 
