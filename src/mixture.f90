@@ -85,7 +85,7 @@ CONTAINS
   SUBROUTINE initialize_mixture
 
     ! external variables
-    USE meteo_module, ONLY : ta , pa , rho_atm , rair
+    USE meteo_module, ONLY : pa , rho_atm , rair
 
     USE moments_module, ONLY : n_nodes
 
@@ -157,12 +157,13 @@ CONTAINS
        
        IF ( distribution .EQ. 'constant' ) THEN
 
-          CALL wheeler_algorithm( mom(i_part,0:1) , xi(i_part,:) ,              &
+          CALL wheeler_algorithm( mom(i_part,0:1), distribution, xi(i_part,:),  &
                wi(i_part,:) )
 
        ELSE
 
-          CALL wheeler_algorithm( mom(i_part,:) , xi(i_part,:) , wi(i_part,:) )
+          CALL wheeler_algorithm( mom(i_part,:) , distribution , xi(i_part,:) , &
+               wi(i_part,:) )
           
        END IF
 

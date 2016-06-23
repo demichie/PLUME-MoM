@@ -38,11 +38,12 @@ CONTAINS
   !> Mattia de' Michieli Vitturi
   !******************************************************************************
 
-  SUBROUTINE wheeler_algorithm(m,xi,w)
+  SUBROUTINE wheeler_algorithm(m,distribution,xi,w)
 
     IMPLICIT NONE
 
     REAL*8, DIMENSION(n_mom), INTENT(IN) :: m
+    CHARACTER(LEN=20), INTENT(IN) :: distribution
     REAL*8, DIMENSION(n_nodes), INTENT(OUT) :: xi
     REAL*8, DIMENSION(n_nodes), INTENT(OUT) :: w
 
@@ -63,94 +64,104 @@ CONTAINS
     CHARACTER*1 :: JOBZ
     INTEGER :: LDZ
 
+    IF ( distribution .EQ. 'constant' ) THEN
 
-    DO l=1,2*n_nodes-2
+       xi(1) = m(2)/m(1)
+       w(1) = m(1)
 
-       sigma(1,l+1) = 0.0
+    ELSE
 
-    END DO
-
-    DO l=0,2*n_nodes-1
-
-       sigma(2,l+1) = m(l+1)
-
-    END DO
-
-    !
-    ! compute coefficients for Jacobi matrix 
-    !
-
-
-    a(1) = m(2) / m(1)
-    b(1) = 0.D0
-
-
-    DO k=1,n_nodes-1
-
-       DO l=k,2*n_nodes-k-1
-
-          sigma(k+2,l+1) = sigma(k+1,l+2) - a(k) * sigma(k+1,l+1) - b(k) *      &
-               sigma(k,l+1)
-
-          a(k+1) = -sigma(k+1,k+1) / sigma(k+1,k) + sigma(k+2,k+2) /            &
-               sigma(k+2,k+1)
-
-          b(k+1) = sigma(k+2,k+1) / sigma(k+1,k)
-
+       DO l=1,2*n_nodes-2
+          
+          sigma(1,l+1) = 0.0
+          
        END DO
+       
+       DO l=0,2*n_nodes-1
+          
+          sigma(2,l+1) = m(l+1)
+          
+       END DO
+       
+       !
+       ! compute coefficients for Jacobi matrix 
+       !
+       
+       
+       a(1) = m(2) / m(1)
+       b(1) = 0.D0
+       
+       
+       DO k=1,n_nodes-1
+          
+          DO l=k,2*n_nodes-k-1
+             
+             sigma(k+2,l+1) = sigma(k+1,l+2) - a(k) * sigma(k+1,l+1) - b(k) *      &
+                  sigma(k,l+1)
+             
+             a(k+1) = -sigma(k+1,k+1) / sigma(k+1,k) + sigma(k+2,k+2) /            &
+                  sigma(k+2,k+1)
+             
+             b(k+1) = sigma(k+2,k+1) / sigma(k+1,k)
+             
+          END DO
+          
+       END DO
+       
+       !
+       ! compute Jacobi matrix
+       !
+       
+       DO i=1,n_nodes
+          
+          jacobi(i,i) = a(i)
+          
+          D(i) = jacobi(i,i)
+          
+       END DO
+       
+       DO i=1,n_nodes-1
+          
+          jacobi(i,i+1) = -(ABS(b(i+1)))**0.5
+          jacobi(i+1,i) = -(ABS(b(i+1)))**0.5
+          
+          E(i) = jacobi(i,i+1)
+          
+       END DO
+       
+       !
+       ! compute eigenvalues and eigenvectors
+       !
+       
+       JOBZ = 'V'    ! compute the eigenvectors
+       
+       LDZ = n_nodes
+       
+       CALL DSTEV(JOBZ, n_nodes, D, E, evec, LDZ, WORK, INFO)
+       
+       !
+       ! return weights
+       !
+       
+       DO i=1,n_nodes
+          
+          w(i) = evec(1,i)**2 * m(1)
+          
+       END DO
+       
+       !
+       ! return abscissas
+       !
+       
+       DO i=1,n_nodes
+          
+          xi(i) = D(i)
+          
+       END DO
+       
+    END IF
 
-    END DO
-
-    !
-    ! compute Jacobi matrix
-    !
-
-    DO i=1,n_nodes
-
-       jacobi(i,i) = a(i)
-
-       D(i) = jacobi(i,i)
-
-    END DO
-
-    DO i=1,n_nodes-1
-
-       jacobi(i,i+1) = -(ABS(b(i+1)))**0.5
-       jacobi(i+1,i) = -(ABS(b(i+1)))**0.5
-
-       E(i) = jacobi(i,i+1)
-
-    END DO
-
-    !
-    ! compute eigenvalues and eigenvectors
-    !
-
-    JOBZ = 'V'    ! compute the eigenvectors
-
-    LDZ = n_nodes
-
-    CALL DSTEV(JOBZ, n_nodes, D, E, evec, LDZ, WORK, INFO)
-
-    !
-    ! return weights
-    !
-
-    DO i=1,n_nodes
-
-       w(i) = evec(1,i)**2 * m(1)
-
-    END DO
-
-    !
-    ! return abscissas
-    !
-
-    DO i=1,n_nodes
-
-       xi(i) = D(i)
-
-    END DO
+    RETURN
 
   END SUBROUTINE wheeler_algorithm
 
@@ -371,26 +382,28 @@ CONTAINS
     IF (xx .LE. 0) THEN
        
        WRITE(*,*) "bad arg in gammln"
-       RETURN
+       gammln = 0.D0
 
+    ELSE
+
+       x = xx
+       y = x
+       
+       tmp = x + 5.2421875D0
+       tmp = ( x + 0.5D0 ) * log(tmp) - tmp
+       
+       ser = 0.999999999999997092
+       
+       DO j=1,14
+          
+          y = y+1.D0
+          ser = ser + cof(j)/y
+          
+       END DO
+       
+       gammln = tmp + log(2.5066282746310005*ser/x)
+       
     END IF
-
-    x = xx
-    y = x
-
-    tmp = x + 5.2421875D0
-    tmp = ( x + 0.5D0 ) * log(tmp) - tmp
-    
-    ser = 0.999999999999997092
-
-    DO j=1,14
-
-       y = y+1.D0
-       ser = ser + cof(j)/y
-
-    END DO
-
-    gammln = tmp + log(2.5066282746310005*ser/x)
 
     RETURN
 

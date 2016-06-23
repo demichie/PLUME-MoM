@@ -161,8 +161,6 @@ CONTAINS
     REAL*8, DIMENSION(n_part,n_nodes) :: xi
     REAL*8, DIMENSION(n_part,n_nodes) :: w
 
-    INTEGER :: iter
-
     INTEGER :: i_part
 
     DO i_part=1,n_part
@@ -173,12 +171,13 @@ CONTAINS
 
        IF ( distribution .EQ. 'constant' ) THEN
 
-          CALL wheeler_algorithm( mom(i_part,0:1) , xi(i_part,:) ,              &
+          CALL wheeler_algorithm( mom(i_part,0:1) , distribution , xi(i_part,:),&
                w(i_part,:) )
 
        ELSE
 
-          CALL wheeler_algorithm( mom(i_part,:) , xi(i_part,:) , w(i_part,:) )
+          CALL wheeler_algorithm( mom(i_part,:) , distribution , xi(i_part,:) , &
+               w(i_part,:) )
 
        END IF
 
@@ -339,6 +338,9 @@ CONTAINS
 
        END IF
 
+       ! Initialization only
+       Us = Us_1000
+
        IF ( ( Rey1 .GT. 0.D0 ) .AND. ( Rey1 .LE. 100.D0 ) ) THEN
     
           ! For small Reynolds numbers the drag coefficient is given by Eq.8
@@ -497,13 +499,12 @@ CONTAINS
   !> Mattia de' Michieli Vitturi
   !******************************************************************************
 
-  FUNCTION particles_beta(i_part,diam_i,diam_j)
+  FUNCTION particles_beta(diam_i,diam_j)
     !
     IMPLICIT NONE
 
     REAL*8 :: particles_beta
 
-    INTEGER, INTENT(IN) :: i_part
     REAL*8, INTENT(IN) :: diam_i
     REAL*8, INTENT(IN) :: diam_j
 
@@ -618,6 +619,12 @@ CONTAINS
 
     REAL*8 :: tp
 
+    !!! WARNING: uninitialized variable
+    air_kin_viscosity = 1.5D-5
+    tp = 1000.D0
+    epsilon = 1.D0
+    !!!
+
     k_b =1.3806488D-23 
 
     beta_B = 2.D0 / 3.D0 * k_b * tp / visc_atm * ( diam1 + diam2 )**2 / ( diam1*diam2 ) 
@@ -672,6 +679,12 @@ CONTAINS
     !> Partciles settling velocities
     REAL*8 :: Vs_1 , Vs_2
 
+
+    !!! WARNING: uninitialized variable
+    kin_visc_air = 1.5D-5
+    E_A = 0.D0
+    !!!
+
     Vs_1 = particles_settling_velocity(i_part,diam1)
 
     Vs_2 = particles_settling_velocity(i_part,diam2)
@@ -702,8 +715,6 @@ CONTAINS
        E_V = 0.D0
 
     END IF
-
-
 
     collision_efficiency = ( 60.D0 * E_V + E_A * Re ) / ( 60.D0 * Re )
 
@@ -746,6 +757,10 @@ CONTAINS
     REAL*8 :: Vs_1 , Vs_2
 
     REAL*8 :: tp
+
+    !!! UNINITIALIZED VARIALBES: CHECK
+    tp = 1000
+    !!!
 
     IF ( tp .LE. 273 ) THEN
 
@@ -829,8 +844,8 @@ CONTAINS
          
              DO j2=1,n_nodes
 
-                part_beta_array(i_part,j,j2) = particles_beta( i_part ,         &
-                     xi(i_part,j) , xi(i_part,j2) )
+                part_beta_array(i_part,j,j2) = particles_beta( xi(i_part,j) ,   &
+                     xi(i_part,j2) )
 
              END DO
 

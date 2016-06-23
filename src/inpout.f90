@@ -289,11 +289,9 @@ CONTAINS
 
     ! External variables
 
-    USE meteo_module, ONLY: rho_atm , ta , pa , atm_profile , n_atm_profile
+    USE meteo_module, ONLY: rho_atm , pa , atm_profile , n_atm_profile
 
     USE moments_module, ONLY : n_nodes
-
-    USE solver_module, ONLY: ds0
 
     USE mixture_module, ONLY: gas_volume_fraction0 , rgasmix
 
@@ -393,21 +391,42 @@ CONTAINS
 
     OPEN(inp_unit,FILE=inp_file,STATUS='old')
 
+
     READ(inp_unit, control_parameters)
+
+    n_unit = n_unit + 1
+    bak_unit = n_unit
+    bak_file = TRIM(run_name)//'.bak'
+
+    OPEN(bak_unit,file=bak_file,status='unknown')
+
+
+    WRITE(bak_unit, control_parameters)
+    
     
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read control_parameters: done'
 
-    IF ( inversion_flag ) READ(inp_unit, inversion_parameters)
+    IF ( inversion_flag ) THEN
+
+       READ(inp_unit, inversion_parameters)
+       WRITE(bak_unit, inversion_parameters)
+
+    END IF
 
     READ(inp_unit, plume_parameters)
+    WRITE(bak_unit, plume_parameters)
 
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read plume_parameters: done'
 
     READ(inp_unit, atm_parameters)
+    WRITE(bak_unit, atm_parameters)
 
     IF ( read_atm_profile .EQ. 'table' ) THEN
 
-       read( inp_unit, table_atm_parameters )
+       n_atm_levels = 0
+
+       READ( inp_unit, table_atm_parameters )
+       WRITE( bak_unit, table_atm_parameters )
 
        n_unit = n_unit + 1
 
@@ -425,15 +444,13 @@ CONTAINS
 
           atm_level = atm_level + 1
           
-          ! READ(atm_unit,*, END = 220 ) rho_atm_apr(atm_level,1:8)
-
           READ(atm_unit,*,IOSTAT=io ) rho_atm_apr(atm_level,1:8)
 
           IF ( io > 0 ) EXIT
 
        END DO atm_read_levels_apr
 
-220    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -457,7 +474,7 @@ CONTAINS
 
        END DO atm_read_levels_jan
 
-221    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -481,7 +498,7 @@ CONTAINS
 
        END DO atm_read_levels_jul
 
-222    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -507,7 +524,7 @@ CONTAINS
 
        END DO atm_read_levels_oct
 
-223    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        ! ----- READ PRESSURES -------
 
@@ -533,7 +550,7 @@ CONTAINS
 
        END DO pres_read_levels_apr
 
-230    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -557,7 +574,7 @@ CONTAINS
           
        END DO pres_read_levels_jan
        
-231    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -581,7 +598,7 @@ CONTAINS
 
        END DO pres_read_levels_jul
 
-232    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
 
        n_unit = n_unit + 1
@@ -608,7 +625,7 @@ CONTAINS
 
        END DO pres_read_levels_oct
 
-233    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
 
 
@@ -636,7 +653,7 @@ CONTAINS
 
        END DO temp_read_levels_apr
 
-240    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -660,7 +677,7 @@ CONTAINS
 
        END DO temp_read_levels_jan
 
-241    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        n_unit = n_unit + 1
 
@@ -684,7 +701,7 @@ CONTAINS
 
        END DO temp_read_levels_jul
 
-242    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
 
        n_unit = n_unit + 1
@@ -711,7 +728,7 @@ CONTAINS
 
        END DO temp_read_levels_oct
 
-243    CLOSE(atm_unit)
+       CLOSE(atm_unit)
 
        ALLOCATE( h_levels(n_atm_levels) )
 
@@ -883,13 +900,15 @@ CONTAINS
 
     ELSEIF ( read_atm_profile .EQ. 'standard' ) THEN
 
-       read( inp_unit,std_atm_parameters )
+       READ( inp_unit,std_atm_parameters )
+       WRITE( bak_unit,std_atm_parameters )
 
     END IF
 
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read atm_parameters: done'
 
     READ(inp_unit, initial_values)
+    WRITE(bak_unit, initial_values)
 
     IF ( ( mfr_exp0 .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .GT. 0.D0 ) ) THEN
        
@@ -918,7 +937,7 @@ CONTAINS
 
     ELSE
 
-       n_nodes = 0.5D0 * n_mom
+       n_nodes = NINT(0.5D0 * n_mom)
 
     END IF
 
@@ -932,6 +951,7 @@ CONTAINS
        ELSE
           
           READ(inp_unit, hysplit_parameters)
+          WRITE(bak_unit, hysplit_parameters)
           
           ALLOCATE( solid_mfr(n_part) , solid_mfr_old(n_part) )
           
@@ -951,6 +971,7 @@ CONTAINS
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read initial_parameters: done'
 
     READ(inp_unit, mixture_parameters) 
+    WRITE(bak_unit, mixture_parameters) 
 
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read mixture_parameters: done'
 
@@ -962,6 +983,7 @@ CONTAINS
        ALLOCATE( d_max(n_part) )
 
        READ(inp_unit, beta_parameters)
+       WRITE(bak_unit, beta_parameters)
 
     ELSEIF ( distribution .EQ. 'lognormal' ) THEN
 
@@ -972,6 +994,7 @@ CONTAINS
        ALLOCATE( sigma_bar(n_part) )
 
        READ(inp_unit, lognormal_parameters)
+       WRITE(bak_unit, lognormal_parameters)
 
        mu_bar = -log( 2.D0 ) * mu_lognormal
        sigma_bar = log( 2.D0 ) * sigma_lognormal
@@ -986,6 +1009,7 @@ CONTAINS
        ALLOCATE( diam_constant_phi(n_part) )
 
        READ(inp_unit, constant_parameters)
+       WRITE(bak_unit, constant_parameters)
 
        diam_constant = 1.D-3 * 2.D0**(-diam_constant_phi)
 
@@ -1064,14 +1088,6 @@ CONTAINS
                         * sigma_lognormal(i_part)**(2*k) *                      &
                         mu_lognormal(i_part)**(i-2*k)
 
-                   IF ( verbose_level .GT. 3 ) THEN
-
-                      WRITE(*,*) 'i,k,coeff_bin,fact2',i,k,coeff(i,2*k),fact2
-                      WRITE(*,*) 'mom0',mom0(i_part,i)
-                      READ(*,*)
-    
-                   END IF
-
                 END DO
 
              ELSE
@@ -1098,11 +1114,12 @@ CONTAINS
 
        IF ( distribution .EQ. 'constant' ) THEN
 
-          CALL wheeler_algorithm( mom0(i_part,0:1) , xi , wi )
+          CALL wheeler_algorithm( mom0(i_part,0:1) , distribution , xi , wi )
 
        ELSE
 
-          CALL wheeler_algorithm( mom0(i_part,0:n_mom-1) , xi , wi )
+          CALL wheeler_algorithm( mom0(i_part,0:n_mom-1) , distribution , xi ,  &
+               wi )
  
        END IF
 
@@ -1213,6 +1230,9 @@ CONTAINS
        ! the coefficient C0 (=mom0) for the particles size distribution is
        ! evaluated in order to have the corrected volume or mass fractions
 
+       ! initialization only
+       C0 = 1.D0
+
        IF ( distribution_variable .EQ. 'particles_number' ) THEN
 
           C0 = 6.D0 / pi_g * solid_volume_fraction0(i_part) / mom0(i_part,3)
@@ -1221,7 +1241,7 @@ CONTAINS
           
           C0 = ( 1.D0 - gas_mass_fraction0 ) / mom0(i_part,0) *                 &
                solid_partial_mass_fraction(i_part)
-          
+      
        END IF
        
        ! the moments are corrected with the factor C0
@@ -1320,9 +1340,9 @@ CONTAINS
        
     END IF
 
+    tend1 = .FALSE.
+    
     IF ( distribution .EQ. 'moments' ) THEN
-
-       tend1 = .FALSE.
 
        moments_search: DO
 
@@ -1362,60 +1382,8 @@ CONTAINS
 
     ! Write a backup of the input file 
 
-    n_unit = n_unit + 1
-
-    bak_unit = n_unit
-
-    bak_file = TRIM(run_name)//'.bak'
-
-    OPEN(bak_unit,file=bak_file,status='unknown')
-
-    WRITE(bak_unit, control_parameters)
-
-    IF ( inversion_flag ) WRITE(bak_unit, inversion_parameters)
-
-    WRITE(bak_unit, plume_parameters)
-
-    WRITE(bak_unit, atm_parameters)
-
-    IF ( read_atm_profile .EQ. 'standard' ) THEN
-
-       WRITE(bak_unit, std_atm_parameters ) 
-
-    END IF
-
-    IF ( read_atm_profile .EQ. 'table' ) THEN
-
-       WRITE(bak_unit, table_atm_parameters ) 
-
-    END IF
-
-
-    WRITE(bak_unit, initial_values)
-
-    IF ( hysplit_flag ) THEN
-
-       WRITE(bak_unit, hysplit_parameters)
-              
-    END IF
-
-
-    WRITE(bak_unit, mixture_parameters)
-
-    IF ( distribution .EQ. 'beta' ) THEN
-
-       WRITE(bak_unit, beta_parameters)
-
-    ELSEIF ( distribution .EQ. 'lognormal' ) THEN
-
-       WRITE(bak_unit, lognormal_parameters)
-
-    ELSEIF ( distribution .EQ. 'constant' ) THEN
-
-       WRITE(bak_unit, constant_parameters)
-
-    ELSEIF ( distribution .EQ. 'moments' ) THEN
-
+    IF ( distribution .EQ. 'moments' ) THEN
+       
        IF (( tend1 ) .OR. ( n_mom .EQ. 0 )) THEN
 
           WRITE(*,*) 'WARNING: input ', ' SAMPLING POINTS not found '
@@ -1567,8 +1535,11 @@ CONTAINS
          mom , set_mom
 
     USE plume_module, ONLY: x , y , z , w , r , mag_u
-    USE mixture_module, ONLY: rho_mix , tp , gas_mass_fraction ,               &
-         atm_mass_fraction , wvapour_mass_fraction
+    USE mixture_module, ONLY: rho_mix , tp , atm_mass_fraction ,               &
+         wvapour_mass_fraction
+
+    ! USE plume_model, ONLY : gas_mass_fraction
+
 
     USE variables, ONLY: verbose_level
 
@@ -1652,14 +1623,11 @@ CONTAINS
 
   SUBROUTINE write_hysplit(x,y,z,last)
 
-    USE meteo_module, ONLY: rho_atm , ta, pa
+    USE particles_module, ONLY: n_part , solid_partial_mass_fraction
 
-    USE particles_module, ONLY: n_mom , n_part , solid_partial_mass_fraction , &
-         mom
+    USE plume_module, ONLY: r , mag_u
+    USE mixture_module, ONLY: rho_mix , gas_mass_fraction
 
-    USE plume_module, ONLY: w , r , mag_u
-    USE mixture_module, ONLY: rho_mix , tp , gas_mass_fraction ,               &
-         atm_mass_fraction , wvapour_mass_fraction
 
 
     IMPLICIT NONE
@@ -1670,13 +1638,11 @@ CONTAINS
 
     INTEGER :: i_part ,i
 
-    INTEGER :: IOstatus
-
     CHARACTER(len=8) :: x1 ! format descriptor
 
     REAL*8 :: xtemp,ytemp,ztemp
-    REAL*8 :: xold,yold,zold
-    REAL*8 :: xnew,ynew,znew
+    REAL*8 :: zold
+    REAL*8 :: znew
 
     REAL*8, ALLOCATABLE :: solid_temp(:)
 
@@ -1695,8 +1661,6 @@ CONTAINS
           ALLOCATE( solid_mfr_oldold(1:n_part) ) 
 
           solid_mfr_init(1:n_part) = solid_mfr(1:n_part)
-          xold = x
-          yold = y
 
           n_unit = n_unit + 1
           temp_unit = n_unit
@@ -1758,8 +1722,6 @@ CONTAINS
 
           nbl_lines = nbl_lines + 1
           
-          xnew = 2.D0 * xtemp - xold
-          ynew = 2.D0 * ytemp - yold
           znew = ztemp - 0.5D0 * hy_deltaz
       
           WRITE(*,*) 'ztemp,znew,z',ztemp,znew,z
@@ -1771,16 +1733,12 @@ CONTAINS
              
              READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
              
-             xold = xnew
-             yold = ynew
              zold = znew
             
              IF  ( z .GT. ztemp - 0.5D0 * hy_deltaz ) THEN
                 
                 nbl_lines = nbl_lines + 1
     
-                xnew = 2.D0 * xtemp - xold
-                ynew = 2.D0 * ytemp - yold
                 znew = ztemp - 0.5D0 * hy_deltaz
                 
                 WRITE(*,*) 'ztemp,znew,z',ztemp,znew,z
@@ -1796,8 +1754,6 @@ CONTAINS
              
           END DO nbl_loop
 
-          hy_x_old = xnew 
-          hy_y_old = ynew 
           hy_z_old = znew
 
           solid_mfr_old(1:n_part) = solid_mfr_oldold(1:n_part)

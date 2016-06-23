@@ -89,12 +89,10 @@ CONTAINS
     USE meteo_module, ONLY: u_atm , rho_atm , ta , duatm_dz , cpair , rair ,    &
          cos_theta , sin_theta
 
-    USE mixture_module, ONLY: rho_mix , tp , cpmix , solid_tot_volume_fraction ,&
-         gas_mass_fraction , rgasmix , rho_gas
+    USE mixture_module, ONLY: rho_mix , tp , cpmix , rgasmix , rho_gas
 
     USE particles_module, ONLY: mom , set_rhop_mom , set_cp_rhop_mom , set_mom ,&
-         set_cp_mom , solid_partial_mass_fraction , solid_volume_fraction ,     &
-         solid_mass_fraction
+         set_cp_mom , solid_volume_fraction , solid_mass_fraction
 
     USE plume_module, ONLY: s , r , u , w , mag_u , phi , alpha_inp , beta_inp ,&
          rp , prob_factor , particles_loss , r0
@@ -198,6 +196,8 @@ CONTAINS
     ueps = alpha_p * ABS( mag_u - u_atm * cos_phi ) + beta_p * ABS( u_atm *     &
          SIN(phi))
 
+    solid_term = 0.D0
+
     IF ( distribution_variable .EQ. "particles_number" ) THEN
 
        solid_term = SUM( solid_volume_fraction(1:n_part) *                      &
@@ -226,6 +226,8 @@ CONTAINS
          solid_term
 
     !---- Mixture specific heat integration 
+
+    cp_solid_term = 0.D0
 
     IF ( distribution_variable .EQ. "particles_number" ) THEN
 
@@ -303,7 +305,7 @@ CONTAINS
     USE mixture_module, ONLY: rgasmix , cpmix , rho_mix , tp
     USE meteo_module, ONLY: u_atm
     USE particles_module, ONLY: mom
-    USE plume_module, ONLY: s , x , z , y , r , u , w , mag_u
+    USE plume_module, ONLY: x , z , y , r , u , w , mag_u
     !
     IMPLICIT NONE
     REAL*8, DIMENSION(:), INTENT(OUT) :: f_
@@ -408,15 +410,15 @@ CONTAINS
   
   SUBROUTINE unlump(f_)
 
-    USE meteo_module, ONLY: u_atm , ta , rho_atm , rair , pa
+    USE meteo_module, ONLY: u_atm , rair , pa
 
     USE mixture_module, ONLY: rho_gas , rgasmix , cpmix , rho_mix , tp ,        &
          gas_volume_fraction , solid_tot_volume_fraction , gas_mass_fraction ,  &
          atm_mass_fraction , wvapour_mass_fraction , rwvapour
 
     USE particles_module, ONLY : mom , solid_partial_mass_fraction ,            &
-         solid_partial_volume_fraction , rhop_mom , solid_volume_fraction ,     &
-         distribution , distribution_variable , solid_mass_fraction
+         solid_partial_volume_fraction , solid_volume_fraction , distribution , &
+         distribution_variable , solid_mass_fraction
 
     USE plume_module, ONLY: x , z , y , r , u , w , mag_u , phi
 
@@ -522,12 +524,12 @@ CONTAINS
 
        IF ( distribution .EQ. 'constant' ) THEN
 
-          CALL wheeler_algorithm( f_(idx1:idx1+1) , xi(i_part,:) ,              &
+          CALL wheeler_algorithm( f_(idx1:idx1+1) , distribution , xi(i_part,:),&
                wi_temp(i_part,:) )
 
        ELSE
 
-          CALL wheeler_algorithm( f_(idx1:idx2) , xi(i_part,:) ,                &
+          CALL wheeler_algorithm( f_(idx1:idx2) , distribution , xi(i_part,:) , &
                wi_temp(i_part,:) )
  
        END IF
@@ -651,13 +653,13 @@ CONTAINS
 
        IF ( distribution .EQ. 'constant' ) THEN
 
-          CALL wheeler_algorithm( mom(i_part,0:1) , xi(i_part,:) ,              &
+          CALL wheeler_algorithm( mom(i_part,0:1) , distribution , xi(i_part,:),&
                wi(i_part,:) )
 
        ELSE
 
-          CALL wheeler_algorithm(  mom(i_part,0:n_mom-1) , xi(i_part,:) ,       &
-            wi(i_part,:) )
+          CALL wheeler_algorithm(  mom(i_part,0:n_mom-1) , distribution ,       &
+               xi(i_part,:) , wi(i_part,:) )
 
        END IF
 
