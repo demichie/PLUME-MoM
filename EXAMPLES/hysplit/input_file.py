@@ -15,6 +15,8 @@ spacing_lon = 0.05
 span_lat = 30.0
 span_lon = 30.0
 vent_height = 2003.0
+vent_radius = 20.0
+log10_mfr = 5.0
 deltaz_release = 200.0
 
 # setup.cfg parameters
