@@ -188,11 +188,15 @@ file_control.writelines(str(spacing_lat)+' '+str(spacing_lon)+'\n')
 file_control.writelines(str(span_lat)+' '+str(span_lon)+'\n')
 file_control.writelines('./\n')
 file_control.writelines('cdump_'+runname+'\n')
-file_control.writelines('2\n')
-file_control.writelines('0 15000\n')
+
+
+n_levels = len(H_LEVELS.split())
+file_control.writelines(str(n_levels)+'\n')
+file_control.writelines(H_LEVELS+'\n')
+
 file_control.writelines(starttime+'\n')
 file_control.writelines('00 00 00 00 00\n')
-file_control.writelines('1 1 0\n')  # first 0: deposit integrated
+file_control.writelines(str(SI_TYPE)+' '+str(SI_HOUR)+' '+str(SI_MINUTE)+' '+'\n')
 file_control.writelines('%d\n'%npart)
 for i in range(npart):
     file_control.writelines('%f %f %f \n'%(diam[i],density[i],shapefactor[i]))#50.0 6.0 1.0

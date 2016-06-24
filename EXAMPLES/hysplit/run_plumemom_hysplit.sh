@@ -22,6 +22,8 @@ result="${temp#\'}"
 
 DUMP="cdump_$result"
 
+DUMP_ACC="cdumpcum_$result"
+
 #----------------------------------------------------------
 
 python run_plumemom.py 
@@ -35,11 +37,18 @@ ${MDL}/exec/hycs_std
 
 echo "'TITLE&','### $0 ### &'" >LABELS.CFG
 ${MDL}/exec/parxplot -iPARDUMP -k1 -z80 -j${MDL}/graphics/arlmap
-# evince parxplot.ps
+evince parxplot.ps
   
-${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1
+${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1 -ukg -oconcplot.ps
 
-# evince concplot.ps
+evince concplot.ps
+
+${MDL}/exec/concacc -i$DUMP -o$DUMP_ACC
+
+${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z80 -d1 -ukg -oconcplot_cum.ps
+
+evince concplot_cum.ps
+
 
 rm -f LABELS.CFG
 
