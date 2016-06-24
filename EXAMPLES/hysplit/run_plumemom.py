@@ -23,6 +23,10 @@ f = open('plume_model.template','r')
 filedata = f.read()
 f.close()
 
+filedata = filedata.replace("{vent_radius}", str(vent_radius) )
+
+filedata = filedata.replace("{log10_mfr}", str(log10_mfr) )
+
 filedata = filedata.replace("{npart}", str(npart) )
 
 filedata = filedata.replace("{shapefactor}", str(shapefactor) )
