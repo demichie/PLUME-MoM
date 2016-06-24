@@ -27,7 +27,10 @@ n_runs = np.int(np.floor( emittime.total_seconds() / deltat_plumemom ) )
 d = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 duration_hhmm = str(d.strftime("%H%M"))
 
-d2 = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom+3600)
+
+duration_h=(int(d.strftime("%H%M")[0:2])+(int(d.strftime("%H%M")[2:4])/float(60)))
+
+d2 = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 
 duration_hhhh = '{0:04}'.format(int(str(d2.strftime("%H"))))
 
@@ -37,6 +40,8 @@ diam = 2**(-np.asarray(diam_phi))
 density = calc_density(diam)/1000
 
 shapefactor = np.ones(npart)*shapefactor
+
+released_mass=0
 
 with open('EMITIMES','w') as emitimes:    
 	emitimes.write('YYYY MM DD HH    DURATION(hhhh) #RECORDS \nYYYY MM DD HH MM DURATION(hhmm) LAT LON HGT(m) RATE(/h) AREA(m2) HEAT(w) \n')
@@ -103,13 +108,15 @@ for i in range(n_runs):
 
     b = np.asarray(b)
     b = b.reshape((-1,3))	
-
+   
     # add lines in order to have all the blocks with the same lenght
+
     for i in range(max_lines-len(b)):
 
-        b = np.vstack((b,b[len(b)-1,:]))
+        b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
+	
         data1 = np.vstack((data1,np.zeros(npart)))
-
+    
     # b1 is an array containing lat,lon and height for time i repeated npart times
     b1=[]
 
@@ -132,7 +139,14 @@ for i in range(n_runs):
             data3[i1+i0*npart,3] = data1[i0,i1]
 	
 	# mass released in one hour [kg]
-    emission_rate = data3[:,3]*3600/1000
+    emission_rate = data3[:,3]*3600
+    
+    # released_mass_i: mass [kg] released during the simulation at i run time
+    released_mass_i=np.sum(emission_rate*duration_h)
+    
+    released_mass=released_mass+released_mass_i
+    print 'Released mass: %.6e kg, partial released mass %.6e kg'%(released_mass_i,released_mass)    
+   
 
     with open('EMITIMES','a') as emitimes:	
 
@@ -144,7 +158,10 @@ for i in range(n_runs):
                            str(data3[h,2]) + ' ' + str(emission_rate[h]) +
                            ' 0.0 0.0\n')
 
+
 emitimes.close()
+
+print 'Total released mass: %.6e kg'%(released_mass)
 
 # write CONTROL file
 file_control=open('CONTROL','w')
@@ -175,7 +192,7 @@ file_control.writelines('2\n')
 file_control.writelines('0 15000\n')
 file_control.writelines(starttime+'\n')
 file_control.writelines('00 00 00 00 00\n')
-file_control.writelines('0 12 0\n')  # first 0: deposit integrated
+file_control.writelines('1 1 0\n')  # first 0: deposit integrated
 file_control.writelines('%d\n'%npart)
 for i in range(npart):
     file_control.writelines('%f %f %f \n'%(diam[i],density[i],shapefactor[i]))#50.0 6.0 1.0
