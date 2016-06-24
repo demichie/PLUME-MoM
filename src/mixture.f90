@@ -94,7 +94,7 @@ CONTAINS
 
     USE particles_module, ONLY: distribution_variable
 
-    USE plume_module, ONLY: w , r , u , mag_u , phi , mfr_exp0, r0
+    USE plume_module, ONLY: w , r , u , mag_u , phi , log10_mfr, r0
 
     USE variables, ONLY: verbose_level
 
@@ -278,9 +278,9 @@ CONTAINS
     cpmix = gas_mass_fraction0 * cpwvapour + ( 1.D0 - gas_mass_fraction0 ) *    &
          cp_solid0
 
-    IF ( mfr_exp0 .GT. 0.d0 ) THEN
+    IF ( log10_mfr .GT. 0.d0 ) THEN
 
-       mass_flow_rate = 10.0**mfr_exp0
+       mass_flow_rate = 10.0** log10_mfr
   
        WRITE(*,*) 'WARNING: Fixed mfr =',mass_flow_rate
 

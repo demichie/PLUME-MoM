@@ -31,7 +31,7 @@ MODULE plume_module
   REAL*8 :: vent_height  !< height of the base of the plume 
   REAL*8 :: w0      !< initial vertical velocity of the plume
   REAL*8 :: r0      !< initial radius of the plume
-  REAL*8 :: mfr_exp0
+  REAL*8 :: log10_mfr
   !
   SAVE
 

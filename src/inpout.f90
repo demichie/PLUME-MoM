@@ -13,7 +13,7 @@ MODULE inpout
     USE variables
 
     USE plume_module, ONLY: vent_height, alpha_inp , beta_inp , particles_loss ,&
-         r0 , w0 , z , mfr_exp0
+         r0 , w0 , z , log10_mfr
 
     USE particles_module, ONLY: n_part , n_mom , mom0 , rhop_mom
 
@@ -118,7 +118,7 @@ MODULE inpout
   
   NAMELIST / table_atm_parameters / month , lat , u_r , z_r , exp_wind
 
-  NAMELIST / initial_values / r0 , w0 , mfr_exp0 , tp0 ,                        &
+  NAMELIST / initial_values / r0 , w0 , log10_mfr , tp0 ,                        &
        initial_neutral_density , gas_mass_fraction0 , vent_height , ds0 ,       &
        n_part , distribution , distribution_variable , n_mom
  
@@ -221,7 +221,7 @@ CONTAINS
 
        R0 = 0.D0 
        W0 = 0.D0
-       MFR_exp0 = -1.0
+       Log10_mfr = -1.0
        TP0 = 1273.D0
        INITIAL_NEUTRAL_DENSITY = .FALSE.
        GAS_MASS_FRACTION0 = 3.0D-2
@@ -910,22 +910,22 @@ CONTAINS
     READ(inp_unit, initial_values)
     WRITE(bak_unit, initial_values)
 
-    IF ( ( mfr_exp0 .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .GT. 0.D0 ) ) THEN
+    IF ( ( log10_mfr .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .GT. 0.D0 ) ) THEN
        
        WRITE(*,*) 'WARNING: initial radius calculated from MER and velocity'
 
     END IF
 
-    IF ( ( mfr_exp0 .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .EQ. 0.d0 ) ) THEN
+    IF ( ( log10_mfr .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .EQ. 0.d0 ) ) THEN
        
        WRITE(*,*) 'WARNING: initial radius and velocity calculated from MER and gas mass fraction'
        STOP
 
     END IF
 
-    IF ( ( mfr_exp0 .GT. 0.d0 ) .AND. ( w0 .GT. 0.d0 )  .AND. ( r0 .GT. 0.d0 ) ) THEN
+    IF ( ( log10_mfr .GT. 0.d0 ) .AND. ( w0 .GT. 0.d0 )  .AND. ( r0 .GT. 0.d0 ) ) THEN
 
-       WRITE(*,*) 'ERROR: too many unknown input parameters: input mfr_exp0 or w0 and r0'
+       WRITE(*,*) 'ERROR: too many unknown input parameters: input log10_mfr or w0 and r0'
        STOP
 
     END IF
