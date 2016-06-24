@@ -925,7 +925,7 @@ CONTAINS
 
     IF ( ( log10_mfr .GT. 0.d0 ) .AND. ( w0 .GT. 0.d0 )  .AND. ( r0 .GT. 0.d0 ) ) THEN
 
-       WRITE(*,*) 'ERROR: too many unknown input parameters: input log10_mfr or w0 and r0'
+       WRITE(*,*) 'ERROR: too many input parameters: input log10_mfr or w0 and r0'
        STOP
 
     END IF
@@ -1215,6 +1215,14 @@ CONTAINS
        
     END IF
     
+    IF ( ( log10_mfr .GT. 0.d0 ) .AND. ( r0 .GT. 0.d0 ) .AND. ( w0 .EQ. 0.D0 ) ) THEN
+       
+         w0 = ( 10.0** log10_mfr ) / ( pi_g * rho_mix * r0**2 )
+
+    END IF
+
+
+
     DO i_part = 1,n_part
 
        ! the volume fraction of the particle phases ( with respect to the

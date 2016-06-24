@@ -214,10 +214,7 @@ CONTAINS
        
        END IF
 
-
-
     END DO
-
 
     rho_solid_tot_avg = 1.D0 / SUM( solid_partial_mass_fraction(1:n_part) /     &
          rho_solid_avg(1:n_part) )
