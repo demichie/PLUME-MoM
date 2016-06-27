@@ -8,6 +8,10 @@ from extract_wind import write_atm
 
 from input_file import *
 
+def round_minutes(dt, direction, resolution):
+    new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
+    return dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
 diam1=np.ones(npart)*diam1
 diam2=np.ones(npart)*diam2
 
@@ -55,8 +59,11 @@ f.close()
 
 time_format = "%y %m %d %H %M"
 
+endemittime_hhmm = datetime.datetime.strptime(endemittime,time_format)
+endemittime = round_minutes(endemittime_hhmm, 'up', 60)
+
 # compute the total simulation time
-runtime = datetime.datetime.strptime(endemittime,time_format) - datetime.datetime.strptime(starttime,time_format)
+runtime = round_minutes(endemittime_hhmm, 'up', 60) - datetime.datetime.strptime(starttime,time_format)
 
 # compute the number of plumemom runs to do
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) )

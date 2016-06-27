@@ -7,7 +7,12 @@ import shutil
 from part_density import calc_density
 from input_file import *
 
+def round_minutes(dt, direction, resolution):
+    new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
+    return dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
 time_format = "%y %m %d %H %M"
+
 
 # compute the total simulation time
 runtime = datetime.datetime.strptime(endruntime,time_format) - datetime.datetime.strptime(starttime,time_format)
@@ -20,9 +25,14 @@ print 'End run time:',endruntime
 print 'Total runtime',runtime_hh,'hrs'
 
 # compute the number of plumemom runs to do
+endemittime_hhmm = datetime.datetime.strptime(endemittime,time_format)
+
+endemittime_hh = round_minutes(endemittime_hhmm, 'up', 60)
+
 emittime = datetime.datetime.strptime(endemittime,time_format) - datetime.datetime.strptime(starttime,time_format)
 
-n_runs = np.int(np.floor( emittime.total_seconds() / deltat_plumemom ) )
+emittime_hh = endemittime_hh - datetime.datetime.strptime(starttime,time_format)
+n_runs = np.int(np.floor( emittime_hh.total_seconds() / deltat_plumemom ) )
 
 d = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 duration_hhmm = str(d.strftime("%H%M"))
@@ -66,10 +76,14 @@ for i in range(n_runs):
     # time of the block
     timei =  datetime.datetime.strptime(starttime,time_format)+datetime.timedelta(seconds=i*deltat_plumemom)
 	
+    timei_end =  datetime.datetime.strptime(starttime,time_format)+datetime.timedelta(seconds=(i+1)*deltat_plumemom)
+
+    d = datetime.datetime(2000,1,1) + ( min(endemittime_hhmm,timei_end) - timei )
+
+    duration_hhmm = str(d.strftime("%H%M"))
+
     timei_str = timei.strftime("%Y %m %d %H")
     timei_str_mm = timei.strftime("%Y %m %d %H %M")
-
-    print 'Time',timei_str,'File',plume_hy
 
     # read the whole plumemom .hy file
     with open(plume_hy, 'r') as fin:
