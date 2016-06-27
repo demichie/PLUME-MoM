@@ -2,7 +2,7 @@ hysplit_dir = "/home/demichie/Codes/hysplit/trunk"
 plumemom_dir = "/home/demichie/Codes/PLUME_MoM"
 runname = 'Calbuco2015'
 starttime="15 04 22 21 00" # Year,month,day,hour,minute
-endemittime = "15 04 22 23 00"
+endemittime = "15 04 22 22 30"
 endruntime = "15 04 24 00 00"
 deltat_plumemom = 3600  # seconds
 
@@ -16,7 +16,7 @@ span_lat = 30.0
 span_lon = 30.0
 vent_height = 2003.0
 vent_radius = 20.0
-log10_mfr = 5.0
+log10_mfr = 7.0
 deltaz_release = 200.0
 
 # setup.cfg parameters
@@ -27,14 +27,14 @@ ncycl=1 # pardump output cycle time
 numpar = 10 # number of puffs or particles to released per cycle
 maxpar = 50000 # maximum number of particles carried in simulation
 initd = 3 # initial distribution, particle, puff, or combination
-delt = 20 # hysplit integration step (minutes)
+delt = 30 # hysplit integration step (minutes)
 
 # particles parameters
 npart = 10
-diam1 = 8.0E-6
-rho1 = 2000
-diam2 = 2.E-3
-rho2 = 2000
+diam1 = 0.0262
+rho1 = 760
+diam2 = 0.024
+rho2 = 1670
 cp_part = 1610
 shapefactor = 1.0
 partial_mass_fractions = [3.0E-004, 2.2E-003, 1.2E-002, 4.47E-002, 0.1152 , 
@@ -49,3 +49,8 @@ SI_HOUR = 6
 SI_MINUTE = 0
 #HEIGHT OF EACH CONCENTRATION LEVEL (m-msl)
 H_LEVELS = '0 15000'
+
+#SAMPLING POINTS
+001 -41.00 -65.00
+002 -41.00 -67.50
+003 -41.00 -70.00
