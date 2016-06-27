@@ -53,7 +53,7 @@ evince concplot_cum.ps
 rm -f LABELS.CFG
 
 
-grep -A100000 POINTS input_file.py > con2stn.inp
+grep -A100000 POINTS input_file.py|grep -v "POINTS" > con2stn.inp
 
 ${MDL}/exec/con2stn -i$DUMP_ACC -scon2stn.inp -d0 -p0 -xi -z1 -ocon2stn.txt
 
