@@ -19,9 +19,6 @@ cp_part=np.ones(npart)*cp_part
 rho1 = np.ones(npart)*rho1
 rho2 = np.ones(npart)*rho2
 
-diam2=np.ones(npart)
-diam1=.1*diam2
-
 # create a second template with the parameters constant in time
 f = open('plume_model.template','r')
 filedata = f.read()
@@ -40,13 +37,13 @@ filedata = filedata.replace("{deltaz_release}", str(deltaz_release) )
 
 filedata = filedata.replace("{vent_height}", str(vent_height) )
 
-filedata = filedata.replace("{diam1}", ",".join(np.char.mod('%f', diam1)) )
-filedata = filedata.replace("{diam2}", ",".join(np.char.mod('%f', diam2)) )
+filedata = filedata.replace("{diam1}", ",".join(np.char.mod('%4f', diam1)) )
+filedata = filedata.replace("{diam2}", ",".join(np.char.mod('%4f', diam2)) )
 
-filedata = filedata.replace("{rho1}", ",".join(np.char.mod('%f', rho1)) )
-filedata = filedata.replace("{rho2}", ",".join(np.char.mod('%f', rho2)) )
+filedata = filedata.replace("{rho1}", ",".join(np.char.mod('%4f', rho1)) )
+filedata = filedata.replace("{rho2}", ",".join(np.char.mod('%4f', rho2)) )
 
-filedata = filedata.replace("{cp_part}", ",".join(np.char.mod('%f', cp_part)) )
+filedata = filedata.replace("{cp_part}", ",".join(np.char.mod('%4f', cp_part)) )
 
 filedata = filedata.replace("{solid_partial_mass_fraction}", ",".join(np.char.mod('%f', partial_mass_fractions)) )
 filedata = filedata.replace("{diam_constant_phi}", ",".join(np.char.mod('%f', diam_phi)) )

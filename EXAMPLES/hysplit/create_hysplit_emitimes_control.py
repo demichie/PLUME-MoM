@@ -112,7 +112,7 @@ for i in range(n_runs):
     for i0 in range(len(data)):
         x=data[i0,0] #[m]
         y=data[i0,1] #[m] 
-        height=data[i0,2] #[m] 	
+        height=data[i0,2]-vent_height #[m] 	
 
         # convert from m to lat lon	  
         lon_col = lon + ((x*10**-3)/float(100))

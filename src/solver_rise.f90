@@ -590,7 +590,7 @@ CONTAINS
 
     rho_mix = f_(1) / u_r2 
 
-    IF ( verbose_level .GT. 2 ) THEN
+    IF ( verbose_level .GE. 1 ) THEN
 
        WRITE(*,*) 'rho_gas',rho_gas
        WRITE(*,*) 'u_r2,r,mag_u',u_r2,r,mag_u

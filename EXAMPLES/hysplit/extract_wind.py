@@ -95,6 +95,13 @@ def write_atm(time_input):
         line=file1.readlines()
         time_start_line=line[1]
         time_start=time_start_line[19:35]
+
+        # add 0 to year if it is a single digit (ex: 6 for 2006 becomes 06)
+        time_split = time_start.split()
+        year = time_split[0]
+        if len(year)==1:
+            time_start = '0'+time_start[1:14]
+
     file1.close()
 
     for i in range(len(line)):

@@ -55,11 +55,18 @@ rm -f LABELS.CFG
 
 grep -A100000 POINTS input_file.py|grep -v "POINTS" > con2stn.inp
 
+sed -i 's/P/0/' con2stn.inp
+sed 's/=/ /' con2stn.inp > con2stn.tmp
+sed 's/\[/ /' con2stn.tmp > con2stn.inp
+sed 's/,/ /' con2stn.inp > con2stn.tmp
+sed 's/\]//' con2stn.tmp > con2stn.inp
+
 ${MDL}/exec/con2stn -i$DUMP_ACC -scon2stn.inp -d0 -p0 -xi -z1 -ocon2stn.txt
 
 python extract_samples.py
 
 rm con2stn.inp
+rm con2stn.tmp
 
 evince gsd.pdf
 
