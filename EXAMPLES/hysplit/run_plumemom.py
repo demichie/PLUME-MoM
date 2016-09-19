@@ -12,6 +12,13 @@ def round_minutes(dt, direction, resolution):
     new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
     return dt + datetime.timedelta(minutes=new_minute - dt.minute)
 
+
+# create a backup of the input file
+src = 'input_file.py'
+dst = runname+'.bak'
+
+shutil.copyfile(src, dst)
+
 diam1=np.ones(npart)*diam1
 diam2=np.ones(npart)*diam2
 
@@ -56,14 +63,16 @@ f.close()
 
 time_format = "%y %m %d %H %M"
 
+starttime_hhmm = datetime.datetime.strptime(starttime,time_format)
+starttime_round = round_minutes(starttime_hhmm, 'down', 60) # arrotonda per difetto starttime
+
 endemittime_hhmm = datetime.datetime.strptime(endemittime,time_format)
-endemittime = round_minutes(endemittime_hhmm, 'up', 60)
+endemittime_round = round_minutes(endemittime_hhmm, 'up', 60) # arrotonda per eccesso endemittime
 
-# compute the total simulation time
-runtime = round_minutes(endemittime_hhmm, 'up', 60) - datetime.datetime.strptime(starttime,time_format)
 
-# compute the number of plumemom runs to do
-n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) )
+runtime=endemittime_round-starttime_round # numero ore arrotondate tra inizio e fine emissione 
+n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) ) # numero run di PlumeMoM
+
 
 for i in range(n_runs):
 

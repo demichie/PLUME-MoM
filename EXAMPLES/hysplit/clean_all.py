@@ -21,10 +21,14 @@ for f in filelist:
     os.remove(f)
 
 
-filelist = glob.glob('*.ps')
+filelist = glob.glob('*.pdf')
 for f in filelist:
     os.remove(f)
 
+
+filelist = glob.glob('*.ps')
+for f in filelist:
+    os.remove(f)
 
 filelist = glob.glob('*.inp')
 for f in filelist:
@@ -40,7 +44,8 @@ for f in filelist:
     os.remove(f)
 
 
-filelist = [ 'EMITIMES' , 'MESSAGE' , 'PARDUMP' , 'WARNING' , 'CONTROL' , 'STARTUP' , 'VMSDIST' ]
+
+filelist = [ 'EMITIMES' , 'MESSAGE' , 'PARDUMP' , 'WARNING' , 'CONTROL' , 'STARTUP' , 'VMSDIST', 'con2stn.txt', 'PARDUMP.txt']
 
 for f in filelist:
     try:

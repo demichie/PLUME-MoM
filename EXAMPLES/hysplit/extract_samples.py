@@ -16,8 +16,10 @@ nsampl = len(INDEX)
 
 block_length = nsampl * npart
 
-JDAY, YR1, MO1, DA1, HR1, MN1, YR2, MO2, DA2, HR2, MN2,  Pol, Lev, Station, Value = np.loadtxt('con2stn.txt',skiprows=1, unpack=True)
-
+#JDAY, YR1, MO1, DA1, HR1, MN1, YR2, MO2, DA2, HR2, MN2,  Pol, Lev, Station, Value = np.loadtxt('con2stn.txt',skiprows=1, unpack=True) #old
+ 
+JDAY,  YR,  MO, DA1, HR1, MN1, DA2, HR2, MN2,  Pol, Lev,   Station,     Value  = np.loadtxt('con2stn.txt',skiprows=1, unpack=True)
+ 
 
 con2std_len = len(JDAY)
 
@@ -41,8 +43,7 @@ color=iter(cm.rainbow(np.linspace(0,1,nsampl)))
 for j in range(nsampl):
     c=next(color)
     ax.bar(np.array(diam_phi)+(j-0.5*nsampl)*width, loading[nblocks-1,j,:]/np.sum(loading[nblocks-1,j,:])*100,width,color=c)
-    stringj = "Loc %s (%s,%s), Loading=%.2e [g/m2]" % (str(j+1), str(LAT[j]), str(LON[j]),np.sum(loading[nblocks-1,j,:])*1000 )
-
+    stringj = "Loc %s (%s,%s), Loading=%.2e [g/m2]" % (str(j+1), str(LAT[j]), str(LON[j]),np.sum(loading[nblocks-1,j,:])*100 )
     legend_strings.append(stringj)
 
 ax.legend(legend_strings)

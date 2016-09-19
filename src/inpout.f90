@@ -1020,10 +1020,16 @@ CONTAINS
        WRITE(*,*) 'WARNING: Sum of solid mass fractions :',                     &
             SUM( solid_partial_mass_fraction(1:n_part) )
 
+       solid_partial_mass_fraction(1:n_part) =                                  &
+            solid_partial_mass_fraction(1:n_part)                               &
+            / SUM( solid_partial_mass_fraction(1:n_part) )
+
+       WRITE(*,*) '         Modified solid mass fractions :',                   &
+            solid_partial_mass_fraction(1:n_part)
+
+
     END IF
 
-    solid_partial_mass_fraction(1:n_part)=solid_partial_mass_fraction(1:n_part) &
-         / SUM( solid_partial_mass_fraction(1:n_part) )
 
     solid_mass_fraction(1:n_part) = ( 1.d0 - gas_mass_fraction0 ) *             &
           solid_partial_mass_fraction(1:n_part)
@@ -1060,8 +1066,8 @@ CONTAINS
              ELSEIF ( distribution .EQ. 'lognormal' ) THEN
 
                 mom0(i_part,i) = 6.d0 / pi_g * 10.D0**(-3*(i-3)) *              &
-                     EXP( ( i-3.D0 ) * mu_bar(i_part) + ( i - 3.D0 )**2 / 2.D0 *&
-                     sigma_bar(i_part)**2 ) 
+                     EXP( ( i-3.D0 ) * mu_bar(i_part) + ( i - 3.D0 )**2 / 2.D0  &
+                     * sigma_bar(i_part)**2 ) 
 
                 IF ( verbose_level .GE. 1 ) WRITE(*,*) 'before correction',     &
                      mom0(i_part,i) 

@@ -89,7 +89,8 @@ CONTAINS
     USE meteo_module, ONLY: u_atm , rho_atm , ta , duatm_dz , cpair , rair ,    &
          cos_theta , sin_theta
 
-    USE mixture_module, ONLY: rho_mix , tp , cpmix , rgasmix , rho_gas
+    USE mixture_module, ONLY: rho_mix , tp , cpmix , rgasmix , rho_gas ,        &
+         gas_mass_fraction
 
     USE particles_module, ONLY: mom , set_rhop_mom , set_cp_rhop_mom , set_mom ,&
          set_cp_mom , solid_volume_fraction , solid_mass_fraction
@@ -172,6 +173,7 @@ CONTAINS
 
     IF ( particles_loss ) THEN
 
+       !---- Probability of particle loss (Eq. 15 PlumeMoM - GMD) 
        factor0 = ( 1.D0 + 6.D0 / 5.D0 * alpha_p )** 2
        prob_factor = ( factor0 - 1.D0 ) / ( factor0 + 1.D0 ) 
 
@@ -192,7 +194,7 @@ CONTAINS
 
     END IF
    
-
+    !---- Entrainment velocity (Eq. 20 PlumeMoM - GMD) 
     ueps = alpha_p * ABS( mag_u - u_atm * cos_phi ) + beta_p * ABS( u_atm *     &
          SIN(phi))
 
@@ -210,18 +212,16 @@ CONTAINS
 
     END IF
 
-    !---- Mass conservation of the plume   (Eq.4 Bursik 2001)
+    !---- Mass conservation of the plume  (Eq. 20 PlumeMoM - GMD)
 
     rhs_(1) = 2.D0 * r * rho_atm * ueps - prob_factor * 2.D0 * r *              &
          solid_term 
 
-    !---- Horizontal momentum conservation  (from Eq.3.2 Weil with added the 
-    !---- contribution of M_i)
+    !---- Horizontal momentum conservation   (Eq. 21 PlumeMoM - GMD)
     rhs_(2) = - r**2 * rho_mix * w * duatm_dz - u * prob_factor * 2.D0 * r *    &
          solid_term 
 
-    !---- Vertical momentum conservation    (from Eq.3.3 Weil with added the 
-    !---- contribution of M_i)
+    !---- Vertical momentum conservation   (Eq. 22 PlumeMoM - GMD)  
     rhs_(3) = gi * r**2 * ( rho_atm - rho_mix ) - w * prob_factor * 2.D0 * r *  &
          solid_term
 
@@ -241,26 +241,27 @@ CONTAINS
 
     END IF 
 
+    !----  Mixture specific heat equation RHS term (Eq. 27 PlumeMoM - GMD)
     rhs_(4) = 1.D0 / ( rho_mix * mag_u * r**2 ) * ( - cpmix * rhs_(1)           &
          + cpair * 2.D0 * r * rho_atm * ueps - prob_factor * 2.D0 * r *         &
          cp_solid_term )
  
-    !---- Energy conservation    (Eq.7 Bursik 2001) (Eq. 6 Barsotti)
+    !---- Energy conservation    (Eq.7 Bursik 2001) (Eq. 23 PlumeMoM - GMD)
     rhs_(5) = 2.D0 * r * ueps * rho_atm * cpair * ta - ( r**2 ) * w * rho_atm * &
          gi - tp * prob_factor * 2.D0 * r * cp_solid_term - rp * r *            &
          ( tp**4 - ta**4 )
 
-    !---- Gas constant for the mixture integration  (Eq. 7 Barsotti)
-    rhs_(6) = ( rair - rgasmix ) / ( rho_gas * mag_u * r**2 )                   &
+    !---- Gas constant for the mixture integration  (Eq. 29 PlumeMoM - GMD)
+    rhs_(6) = ( rair - rgasmix ) / ( rho_mix * gas_mass_fraction * mag_u*r**2 ) &
          * ( 2.D0 * r * rho_atm * ueps )
-         
-    !---- Z integration    (Eq.1a Bursik 2001)
+      
+    !---- Z integration   (Eq. 30 PlumeMoM - GMD)
     rhs_(7) = w / mag_u
 
-    !---- X integration    (Eq.1b Bursik 2001)
+    !---- X integration   (Eq. 30 PlumeMoM - GMD)
     rhs_(8) = cos_phi * cos_theta
 
-    !---- Y integration    (Eq.1b Bursik 2001)
+    !---- Y integration   (Eq. 30 PlumeMoM - GMD)
     rhs_(9) = cos_phi * sin_theta
 
     !---- Moments equations
@@ -270,11 +271,13 @@ CONTAINS
 
           IF ( distribution_variable .EQ. "particles_number" ) THEN
 
+             !---- Momentum equation RHS term (Eq. 16 PlumeMoM - GMD)
              rhs_(10+i+(i_part-1)*n_mom) = - prob_factor * 2.D0 * r *           &
                   set_mom(i_part,i) * mom(i_part,i) 
 
           ELSEIF ( distribution_variable .EQ. "mass_fraction" ) THEN
 
+             !---- Momentum equation RHS term (Eq. 32 PlumeMoM - GMD)
              rhs_(10+i+(i_part-1)*n_mom) = - prob_factor * 2.D0 * r *           &
                   rho_mix * set_mom(i_part,i) * mom(i_part,i)
 
@@ -569,9 +572,11 @@ CONTAINS
 
        END IF
 
-       IF ( verbose_level .GT. 3 ) THEN
+       IF ( verbose_level .GT. 0 ) THEN
 
           WRITE(*,*) 'rhoB_solid_U_r2',idx1,rhoB_solid_U_r2(i_part)
+          WRITE(*,*) 'part_dens_array(i_part,:)',part_dens_array(i_part,:)
+          WRITE(*,*) 'xi(i_part,:)',xi(i_part,:)
           WRITE(*,*) 'i_part,rho_solid_avg',i_part, rho_solid_avg(i_part)
 
        END IF
@@ -593,7 +598,10 @@ CONTAINS
     IF ( verbose_level .GE. 1 ) THEN
 
        WRITE(*,*) 'rho_gas',rho_gas
+       WRITE(*,*) '*********** SUM(alfa_s_u_r2(1:n_part))',SUM(alfa_s_u_r2(1:n_part))
        WRITE(*,*) 'u_r2,r,mag_u',u_r2,r,mag_u
+       WRITE(*,*) 'f_(1),rho_gas',f_(1),rho_gas
+       WRITE(*,*) 'rhoB_solid_tot_U_r2',rhoB_solid_tot_U_r2
        WRITE(*,*) 'rho_mix',rho_mix
        WRITE(*,*) ' alfa_g', alfa_g_u_r2/ u_r2
        READ(*,*)

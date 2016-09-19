@@ -68,16 +68,17 @@ def calc_atm(profile,fields_list):
 
         z[1:] = z[0] + np.cumsum(deltaz)
 
-
+	# W->E component of horizontal velocity (m/s)
     U_idx = fields_list.index("UWND") + 1
     U = profile[:,U_idx]
 
-    W_idx = fields_list.index("WWND") + 1
-    W = profile[:,W_idx]
+	# S->N component of horizontal velocity (m/s)
+    V_idx = fields_list.index("VWND") + 1
+    V = profile[:,V_idx]
 
 
 #	print(len(z),len(rho),len(P),len(T),len(RH),len(profile[:,10]))
-    return z/1000.0, rho, P/100, T, RH, U, W
+    return z/1000.0, rho, P/100, T, RH, U, V
 
 def write_atm(time_input):
     """create atmosperic profile for plumemom """

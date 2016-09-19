@@ -321,6 +321,14 @@ CONTAINS
           ds = 0.5D0 * ds
           f = f_stepold
 
+          IF ( verbose_level .GT. 0 ) THEN
+
+             WRITE(*,*) 'WARNING: negative velocit w= ',w
+             WRITE(*,*) 'reducing step-size ds= ',ds
+             READ(*,*) 
+             
+          END IF
+
        ELSE
 
           idx = idx + 1

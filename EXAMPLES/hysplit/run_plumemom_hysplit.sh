@@ -37,36 +37,45 @@ ${MDL}/exec/hycs_std
 
 echo "'TITLE&','### $0 ### &'" >LABELS.CFG
 ${MDL}/exec/parxplot -iPARDUMP -k1 -z80 -j${MDL}/graphics/arlmap
-evince parxplot.ps
-  
-${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1 -ukg -oconcplot.ps
 
-evince concplot.ps
+${MDL}/exec/par2asc -iPARDUMP -oPARDUMP.txt 
+    
+${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1 -ukg -oconcplot.ps
 
 ${MDL}/exec/concacc -i$DUMP -o$DUMP_ACC
 
+
 ${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z80 -d1 -ukg -oconcplot_cum.ps
 
-evince concplot_cum.ps
+filelist=`(find . -name \*.ps)`
 
+for i in $filelist; do
+
+        ps2pdf $i
+
+        rm $i
+done
 
 rm -f LABELS.CFG
 
 
-grep -A100000 POINTS input_file.py|grep -v "POINTS" > con2stn.inp
+grep -A100000 POINTS input_file.py|grep -v "POINTS" > con2stn0.inp
 
-sed -i 's/P/0/' con2stn.inp
-sed 's/=/ /' con2stn.inp > con2stn.tmp
-sed 's/\[/ /' con2stn.tmp > con2stn.inp
-sed 's/,/ /' con2stn.inp > con2stn.tmp
-sed 's/\]//' con2stn.tmp > con2stn.inp
+sed -i 's/P/0/' con2stn0.inp
+sed 's/=/ /' con2stn0.inp > con2stn.tmp
+sed 's/\[/ /' con2stn.tmp > con2stn0.inp
+sed 's/,/ /' con2stn0.inp > con2stn.tmp
+sed 's/\]//' con2stn.tmp > con2stn0.inp
+sed '/^$/d' con2stn0.inp > con2stn.inp # elimina le ultime righe bianche dal file con2stn0.inp
 
-${MDL}/exec/con2stn -i$DUMP_ACC -scon2stn.inp -d0 -p0 -xi -z1 -ocon2stn.txt
+${MDL}/exec/con2stn -i$DUMP_ACC -scon2stn.inp -d0 -p0 -xi -z1 -r0 -ocon2stn.txt
 
 python extract_samples.py
 
 rm con2stn.inp
+rm con2stn0.inp
 rm con2stn.tmp
 
-evince gsd.pdf
+
+
 

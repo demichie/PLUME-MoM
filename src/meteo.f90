@@ -79,6 +79,16 @@ MODULE meteo_module
 
   INTEGER :: n_atm_profile
 
+  !> atmospheric profile above the vent. It is an array with n_atm_profile rows
+  !> and 7 columns:\n
+  !> - 1) height (km asl)
+  !> - 2) density (kg/m^3)
+  !> - 3) pressure (hPa)
+  !> - 4) temperature (K) 
+  !> - 5) specific-humidity (g/kg)
+  !> - 6) wind velocity West->East (m/s)
+  !> - 7) wind velocity North-South (m/s)
+  !> .
   REAL*8, ALLOCATABLE :: atm_profile(:,:)
 
   CHARACTER*10 :: read_atm_profile
