@@ -16,10 +16,16 @@ nsampl = len(INDEX)
 
 block_length = nsampl * npart
 
-#JDAY, YR1, MO1, DA1, HR1, MN1, YR2, MO2, DA2, HR2, MN2,  Pol, Lev, Station, Value = np.loadtxt('con2stn.txt',skiprows=1, unpack=True) #old
- 
-JDAY,  YR,  MO, DA1, HR1, MN1, DA2, HR2, MN2,  Pol, Lev,   Station,     Value  = np.loadtxt('con2stn.txt',skiprows=1, unpack=True)
- 
+con2stn = np.loadtxt('con2stn.txt',skiprows=1)
+
+# print 'size',con2stn.shape
+
+JDAY = con2stn[:,0]
+
+Value = con2stn[:,-1]
+
+# print 'JDAY',JDAY
+# print 'Value',Value
 
 con2std_len = len(JDAY)
 
