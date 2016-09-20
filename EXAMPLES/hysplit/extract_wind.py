@@ -47,6 +47,7 @@ def calc_atm(profile,fields_list):
 
         Q = RH / P * ( 0.622 * Es )
 
+    # Mixture density, Eq. (3) http://www.engineeringtoolbox.com/density-air-d_680.html
     rho = rho_da * ( 1 + Q ) / ( 1 + Q * Rw / Rd )
 
     if 'HGTS' in fields_list:
