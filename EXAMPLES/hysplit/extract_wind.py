@@ -35,7 +35,9 @@ def calc_atm(profile,fields_list):
 
     if 'SPHU' in fields_list:
 
-        Q = profile[:,7]/1000.0
+        SPHU_idx = fields_list.index("SPHU") + 1
+
+        Q = profile[:,SPHU_idx]/1000.0
 
     else:
 

@@ -121,7 +121,7 @@ for i in range(max_lines-len(b)):
 
     b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
 
-data1 = np.vstack((data1,np.zeros(npart)))
+    data1 = np.vstack((data1,np.zeros(npart)))
 
 # b1 is an array containing lat,lon and height for time i repeated npart times
 b1=[]
