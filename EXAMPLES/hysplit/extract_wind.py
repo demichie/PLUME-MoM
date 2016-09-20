@@ -39,6 +39,8 @@ def calc_atm(profile,fields_list):
 
         Q = profile[:,SPHU_idx]/1000.0
 
+        RH = (Q * P) / ( 0.622 * Es )
+
     else:
 
         RH_idx = fields_list.index("RELH") + 1
