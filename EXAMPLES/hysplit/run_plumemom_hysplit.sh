@@ -35,6 +35,9 @@ python create_hysplit_setup_ascdata.py
 
 ${MDL}/exec/hycs_std  
 
+echo "-------------- start postprocessing ---------------"
+
+
 echo "'TITLE&','### $0 ### &'" >LABELS.CFG
 ${MDL}/exec/parxplot -iPARDUMP -k1 -z80 -j${MDL}/graphics/arlmap
 
@@ -47,21 +50,13 @@ ${MDL}/exec/concacc -i$DUMP -o$DUMP_ACC
 
 ${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z80 -d1 -ukg -oconcplot_cum.ps
 
-filelist=`(find . -name \*.ps)`
-
-for i in $filelist; do
-
-        ps2pdf $i
-
-        rm $i
-done
-
 rm -f LABELS.CFG
 
+echo "-------------- extract loading and GSD at locs ---------------"
 
 grep -A100000 POINTS input_file.py|grep -v "POINTS" > con2stn0.inp
 
-sed -i 's/P/0/' con2stn0.inp
+sed -i '' 's/P/0/' con2stn0.inp
 sed 's/=/ /' con2stn0.inp > con2stn.tmp
 sed 's/\[/ /' con2stn.tmp > con2stn0.inp
 sed 's/,/ /' con2stn0.inp > con2stn.tmp
@@ -75,6 +70,18 @@ python extract_samples.py
 rm con2stn.inp
 rm con2stn0.inp
 rm con2stn.tmp
+
+echo "-------------- convert ps to pdf ---------------"
+
+filelist=`(find . -name \*.ps)`
+
+for i in $filelist; do
+
+        ps2pdf $i
+
+        rm $i
+done
+
 
 
 
