@@ -18,7 +18,8 @@ for f in filelist:
 
 filelist = glob.glob('*.CFG')
 for f in filelist:
-    os.remove(f)
+    if ( f != 'MAPTEXT.CFG' ):
+        os.remove(f)
 
 
 filelist = glob.glob('*.pdf')

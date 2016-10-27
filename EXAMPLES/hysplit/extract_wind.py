@@ -1,7 +1,7 @@
 import numpy as np
 import subprocess
 import datetime
-import os,sys
+import os,sys,time
 import shutil
 
 def calc_atm(profile,fields_list):
@@ -38,6 +38,8 @@ def calc_atm(profile,fields_list):
         SPHU_idx = fields_list.index("SPHU") + 1
 
         Q = profile[:,SPHU_idx]/1000.0
+
+        RH = (Q * P) / ( 0.622 * Es )
 
     else:
 
@@ -123,8 +125,7 @@ def write_atm(time_input):
     subprocess.call(profile+ " -d"+run_path+" -f"+meteo_file
                     + " -y"+str(lat)+" -x"+str(lon)+" -o"
                     +str(time_difference_in_hours)+" -p01", shell=True)
-
-    os.chdir(sys.path[0])
+    
     with open('atm_profile.txt','w') as file: # output file: wind profile at vent position at time
         with open("profile_01.txt") as fp:
             for i, line in enumerate(fp):
@@ -132,6 +133,7 @@ def write_atm(time_input):
                     file.write(str(line[0:64])+'\n')
         fp.close()
     file.close()
+
              
     subprocess.call("rm " +run_path+"profile_00.txt", shell=True) 
     subprocess.call("rm " +run_path+"profile_01.txt", shell=True) 
