@@ -28,8 +28,9 @@ CONTAINS
   SUBROUTINE plumerise
 
     ! external variables
-    USE meteo_module, ONLY : rho_atm
-    USE mixture_module, ONLY : gas_mass_fraction , rho_mix, mass_flow_rate
+    USE meteo_module, ONLY : rho_atm , rair
+    USE mixture_module, ONLY : gas_mass_fraction , rho_mix, mass_flow_rate ,    &
+         rgasmix , rwvapour
     USE particles_module, ONLY : n_part , mom0 , mom
     USE particles_module, ONLY : distribution_variable
     USE particles_module, ONLY : solid_partial_mass_fraction
@@ -316,14 +317,23 @@ CONTAINS
        !
        ! Reduce step-size condition
        !
-       IF ( w .LE. 0.D0) THEN
+       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rwvapour) ) ) THEN
 
           ds = 0.5D0 * ds
           f = f_stepold
 
           IF ( verbose_level .GT. 0 ) THEN
 
-             WRITE(*,*) 'WARNING: negative velocit w= ',w
+             IF ( w .LE. 0.D0) THEN
+
+                WRITE(*,*) 'WARNING: negative velocit w= ',w
+
+             ELSE
+
+                WRITE(*,*) 'WARNING: rgasmix = ',rgasmix
+
+             END IF
+
              WRITE(*,*) 'reducing step-size ds= ',ds
              READ(*,*) 
              

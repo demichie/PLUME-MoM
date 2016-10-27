@@ -155,6 +155,11 @@ CONTAINS
     !> Sutherland's constant
     REAL*8 :: Cs
 
+    ! Variables used to compute duatm_dz
+    REAL*8 :: eps_z , z_eps
+
+    REAL*8 :: WE_wind_eps , NS_wind_eps , u_atm_eps
+
     IF ( read_atm_profile .EQ. 'card' ) THEN
 
        ! interp density profile
@@ -177,6 +182,21 @@ CONTAINS
        cos_theta = WE_wind / u_atm
        sin_theta = NS_wind / u_atm
 
+       eps_z = 1.D-5
+       z_eps = z + eps_z
+
+       ! interp pressure profile
+       CALL interp_1d_scalar(atm_profile(1,:), atm_profile(6,:), z_eps,         &
+            WE_wind_eps)
+
+       ! interp pressure profile
+       CALL interp_1d_scalar(atm_profile(1,:), atm_profile(7,:), z_eps,         &
+            NS_wind_eps)
+
+       u_atm_eps = DSQRT( WE_wind_eps**2 + NS_wind_eps**2 )
+
+       duatm_dz = ( u_atm_eps - u_atm ) / eps_z 
+
     ELSEIF ( read_atm_profile .EQ. 'table' ) THEN
 
        ! interp density profile
@@ -192,9 +212,14 @@ CONTAINS
 
           u_atm = u_r * ( ( z - vent_height ) / z_r )**exp_wind
 
+          duatm_dz =  ( exp_wind * u_r * ( ( z - vent_height ) / z_r )         &
+               ** ( exp_wind - 1.D0 ) ) * ( 1.D0 / z_r )
+
        ELSE
 
           u_atm = u_r
+
+          duatm_dz = 0.D0
 
        END IF
 
@@ -207,17 +232,22 @@ CONTAINS
 
        ! u_atm = u_atm0 + duatm_dz * z 
        ! duatm_dz = duatm_dz0
-       
+
        IF ( z .LE. z_r ) THEN
 
-          u_atm = u_r * ( z / z_r )**exp_wind
+          u_atm = u_r * ( ( z - vent_height ) / z_r )**exp_wind
+
+          duatm_dz =  ( exp_wind * u_r * ( ( z - vent_height ) / z_r )         &
+               ** ( exp_wind - 1.D0 ) ) * ( 1.D0 / z_r )
 
        ELSE
 
           u_atm = u_r
 
-       END IF
+          duatm_dz = 0.D0
 
+       END IF
+       
        cos_theta = 1.D0
        sin_theta = 0.D0
 

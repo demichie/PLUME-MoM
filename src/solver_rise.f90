@@ -124,6 +124,8 @@ CONTAINS
 
     REAL*8 :: a_10 , a_10_deriv
 
+    !WRITE(*,*) 'mag_u',mag_u
+
     cos_phi = u / mag_u
 
     IF ( alpha_inp .LE. 0.d0 ) THEN 
@@ -255,6 +257,12 @@ CONTAINS
     rhs_(6) = ( rair - rgasmix ) / ( rho_mix * gas_mass_fraction * mag_u*r**2 ) &
          * ( 2.D0 * r * rho_atm * ueps )
       
+    !WRITE(*,*) '+++++++++++++++++++++++++++++++++++'
+    !WRITE(*,*) 'rgasmix',rgasmix,ueps,r,mag_u
+    !WRITE(*,*) 'rhs_(6)',rhs_(6)
+    !WRITE(*,*) '+++++++++++++++++++++++++++++++++++'
+    !READ(*,*) 
+
     !---- Z integration   (Eq. 30 PlumeMoM - GMD)
     rhs_(7) = w / mag_u
 
@@ -490,6 +498,7 @@ CONTAINS
     cpmix = f_(4)
 
     tp = f_(5) / ( f_(1) * cpmix )
+
     rgasmix = f_(6)
 
     rho_gas = pa / ( rgasmix * tp )
