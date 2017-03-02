@@ -174,8 +174,21 @@ CONTAINS
        ! interp pressure profile
        CALL interp_1d_scalar(atm_profile(1,:), atm_profile(6,:), z, WE_wind)
 
+       WHERE ( WE_wind .EQ. 0.D0 )
+
+          WE_wind = 1.D-5
+          
+       END WHERE
+
        ! interp pressure profile
        CALL interp_1d_scalar(atm_profile(1,:), atm_profile(7,:), z, NS_wind)
+
+       WHERE ( NS_wind .EQ. 0.D0 )
+
+          NS_wind = 1.D-5
+          
+       END WHERE
+
 
        u_atm = DSQRT( WE_wind**2 + NS_wind**2 )
 
