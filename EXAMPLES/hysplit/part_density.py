@@ -11,6 +11,8 @@ def calc_density(diam):
 
     from input_file import *
 
+    # diam is in millimiters while diam1 and diam2 are in meters
+
     diam1=np.ones(npart)*diam1
     diam2=np.ones(npart)*diam2
 
