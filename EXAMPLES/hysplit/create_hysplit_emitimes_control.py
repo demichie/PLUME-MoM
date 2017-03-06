@@ -419,7 +419,7 @@ file_control.writelines('00 00 00 00 00\n')
 file_control.writelines(str(SI_TYPE)+' '+str(SI_HOUR)+' '+str(SI_MINUTE)+' '+'\n')
 file_control.writelines('%d\n'%npart)
 for i in range(npart):
-    file_control.writelines('%f %f %f \n'%(diam[i],density[i],shapefactor[i]))#50.0 6.0 1.0
+    file_control.writelines('%f %f %f \n'%(diam[i],density[i],-shapefactor[i]))#50.0 6.0 1.0
     file_control.writelines('0 0.0 0.0 0.0 0.0 \n')#0 0.0 0.0 0.0 0.0
     file_control.writelines('0.0 0.0 0.0 \n')#0.0 1.0E+06 1.0E-06
     file_control.writelines('0\n')#0
