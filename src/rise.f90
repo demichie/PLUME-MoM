@@ -264,12 +264,6 @@ CONTAINS
 
        f_stepold = f
 
-       !
-       ! ---------------------------------------------------------
-       ! ... compute meteo conditions and the rhs of the equations 
-       ! ... for this location
-       ! ---------------------------------------------------------
-       !
        IF ( verbose_level .GE. 2 ) THEN
 
           WRITE(*,*)
@@ -278,14 +272,15 @@ CONTAINS
 
        END IF
 
+       ! ----- predictor step (compute temporary quantities) --------------------
+
        CALL unlump(f)
 
        w_oldold = w_old
        w_old = w
 
        CALL rate(rhs)
-       !
-       ! ... predictor step (compute temporary quantities)
+
        CALL marching(f,ftemp,rhs) 
 
        IF ( verbose_level .GE. 2 ) THEN
@@ -297,26 +292,10 @@ CONTAINS
        END IF
 
        CALL unlump(ftemp)
-       CALL rate(rhstemp)
-       !
-       ! ... corrector step
-       rhs = 0.5D0 * ( rhstemp - rhs )
-       CALL marching(ftemp,f,rhs)
-
-       IF ( verbose_level .GE. 2 ) THEN
-
-          WRITE(*,*)
-          WRITE(*,*) '**************** AFTER CORRECTOR STEP *****************'
-          WRITE(*,*)
-
-       END IF
 
 
-       CALL unlump(f)
+       ! ----- Check on the solution to reduce step-size condition -------------
 
-       !
-       ! Reduce step-size condition
-       !
        IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rwvapour) ) ) THEN
 
           ds = 0.5D0 * ds
@@ -330,7 +309,9 @@ CONTAINS
 
              ELSE
 
-                WRITE(*,*) 'WARNING: rgasmix = ',rgasmix
+                WRITE(*,*) 'WARNING: rgasmix =',rgasmix
+
+                WRITE(*,*) 'rair =',rair,' rwvapour =',rwvapour
 
              END IF
 
@@ -339,78 +320,129 @@ CONTAINS
              
           END IF
 
-       ELSE
-
-          idx = idx + 1
-
-          z_array(idx) = z
-          w_array(idx) = w
-
-          IF ( ( w_old .LT. w ) .AND. ( w_old .LT. w_oldold ) )  THEN
-
-             w_minrel = w_old
-
-             !WRITE(*,*) 'minrel',w_oldold,w_old,w
-
-          END IF
-          
-          IF ( w .GT. w_maxabs ) w_maxabs = w
-
-          IF ( ( w_old .GT. w ) .AND. ( w_old .GT. w_oldold ) )  THEN
-
-             w_maxrel = w_old
-
-             !WRITE(*,*) 'maxrel',w_oldold,w_old,w
-
-          END IF
-
-          delta_rho = MIN( delta_rho , rho_mix - rho_atm )
-
-          ! used to define the neutral buoyancy level 
-          deltarho =  rho_mix - rho_atm
-
-
-          IF ( deltarho * deltarho_old .LT. 0.D0 ) THEN
-
-             rho_nbl = rho_mix
-             height_nbl = z - vent_height
-             x_nbl = x
-             y_nbl = y
-             
-          END IF
-
-          s = s + ds
-
-          deltarho_old = deltarho
-
-          IF ( verbose_level .GE. 2 ) THEN
-
-             DO i_part=1,n_part
-
-                WRITE(*,*) '**',mom(i_part,1)/mom(i_part,0)
-
-             END DO
-
-             READ(*,*)
-
-          END IF
-
-          IF ( .NOT.dakota_flag ) CALL write_column
-
-          IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
-
-          ! ... Exit condition
-
-          IF ( w .LE. 1.D-5 ) THEN
-
-             EXIT main_loop
-
-          END IF
+          ! Repeat the iteration with reduced step-size
+          CYCLE 
 
        END IF
 
-    END DO main_loop
+       ! ----- Corrector step ---------------------------------------------------
 
+       CALL rate(rhstemp)
+
+       rhs = 0.5D0 * ( rhstemp - rhs )
+
+       CALL marching(ftemp,f,rhs)
+
+       IF ( verbose_level .GE. 2 ) THEN
+
+          WRITE(*,*)
+          WRITE(*,*) '**************** AFTER CORRECTOR STEP *****************'
+          WRITE(*,*)
+
+       END IF
+
+       CALL unlump(f)
+ 
+       ! ----- Reduce step-size condition and repeat iteration ------------------
+ 
+       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rwvapour) ) ) THEN
+
+          ds = 0.5D0 * ds
+          f = f_stepold
+          
+          IF ( verbose_level .GT. 0 ) THEN
+             
+             IF ( w .LE. 0.D0) THEN
+                
+                WRITE(*,*) 'WARNING: negative velocit w= ',w
+                
+             ELSE
+                
+                WRITE(*,*) 'WARNING: rgasmix = ',rgasmix
+                
+             END IF
+             
+             WRITE(*,*) 'reducing step-size ds= ',ds
+             READ(*,*) 
+             
+          END IF
+
+          ! go to the next iteration
+          CYCLE
+
+       END IF
+
+       ! ------ update the solution ---------------------------------------------
+
+       idx = idx + 1
+       
+       z_array(idx) = z
+       w_array(idx) = w
+       
+       IF ( ( w_old .LT. w ) .AND. ( w_old .LT. w_oldold ) )  THEN
+          
+          w_minrel = w_old
+          
+          !WRITE(*,*) 'minrel',w_oldold,w_old,w
+          
+       END IF
+       
+       IF ( w .GT. w_maxabs ) w_maxabs = w
+       
+       IF ( ( w_old .GT. w ) .AND. ( w_old .GT. w_oldold ) )  THEN
+          
+          w_maxrel = w_old
+          
+          !WRITE(*,*) 'maxrel',w_oldold,w_old,w
+          
+       END IF
+       
+       delta_rho = MIN( delta_rho , rho_mix - rho_atm )
+       
+       ! used to define the neutral buoyancy level 
+       deltarho =  rho_mix - rho_atm
+       
+       
+       IF ( deltarho * deltarho_old .LT. 0.D0 ) THEN
+          
+          rho_nbl = rho_mix
+          height_nbl = z - vent_height
+          x_nbl = x
+          y_nbl = y
+          
+       END IF
+       
+       s = s + ds
+       
+       deltarho_old = deltarho
+       
+       IF ( verbose_level .GE. 2 ) THEN
+          
+          DO i_part=1,n_part
+             
+             WRITE(*,*) '**',mom(i_part,1)/mom(i_part,0)
+             
+          END DO
+          
+          READ(*,*)
+          
+       END IF
+       
+       IF ( .NOT.dakota_flag ) CALL write_column
+       
+       IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
+       
+
+       ! ----- Exit condition ---------------------------------------------------
+       
+       IF ( w .LE. 1.D-5 ) THEN
+          
+          EXIT main_loop
+          
+       END IF
+       
+    END DO main_loop
+    
     IF ( hysplit_flag ) THEN
 
        IF ( nbl_stop ) THEN

@@ -1024,8 +1024,12 @@ CONTAINS
             solid_partial_mass_fraction(1:n_part)                               &
             / SUM( solid_partial_mass_fraction(1:n_part) )
 
-       WRITE(*,*) '         Modified solid mass fractions :',                   &
-            solid_partial_mass_fraction(1:n_part)
+       IF ( verbose_level .GE. 1 ) THEN
+
+          WRITE(*,*) '         Modified solid mass fractions :',                &
+               solid_partial_mass_fraction(1:n_part)
+
+       END IF
 
 
     END IF
@@ -1291,18 +1295,22 @@ CONTAINS
     WRITE(*,*) 'solid total mass_fraction', solid_tot_volume_fraction0 *        &
          rho_solid_tot_avg / rho_mix
 
-    IF ( distribution_variable .EQ. 'particles_number' ) THEN
+    IF ( verbose_level .GE. 1 ) THEN
 
-       WRITE(*,*) 'solid_mass_fractions', mom0(1:n_part,3) *                    &
-            rho_solid_avg(1:n_part) / ( SUM( mom0(1:n_part,3) *                 &
-            rho_solid_avg(1:n_part)) )
+       IF ( distribution_variable .EQ. 'particles_number' ) THEN
+
+          WRITE(*,*) 'solid_mass_fractions', mom0(1:n_part,3) *                 &
+               rho_solid_avg(1:n_part) / ( SUM( mom0(1:n_part,3) *              &
+               rho_solid_avg(1:n_part)) )
           
-    ELSEIF ( distribution_variable .EQ. 'mass_fraction' ) THEN
-
-       WRITE(*,*) 'solid_mass_fractions', mom0(1:n_part,0)
+       ELSEIF ( distribution_variable .EQ. 'mass_fraction' ) THEN
+          
+          WRITE(*,*) 'solid_mass_fractions', mom0(1:n_part,0)
+          
+       END IF
        
     END IF
-
+    
     WRITE(*,*) 'gas volume fraction', gas_volume_fraction0
     WRITE(*,*) 'gas mass fraction', gas_mass_fraction0
 
@@ -1688,7 +1696,11 @@ CONTAINS
 
        END IF
 
-       WRITE(*,*) 'Solid mass flow rate: ',solid_mfr(1:n_part)
+       IF ( verbose_level .GE. 1 ) THEN
+
+          WRITE(*,*) 'Solid mass flow rate: ',solid_mfr(1:n_part)
+
+       END IF
 
        WRITE(hy_unit,107,advance="no")
        
