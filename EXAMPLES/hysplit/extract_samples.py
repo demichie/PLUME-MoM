@@ -47,10 +47,12 @@ legend_strings = []
 color=iter(cm.rainbow(np.linspace(0,1,nsampl)))
 
 for j in range(nsampl):
-    c=next(color)
-    ax.bar(np.array(diam_phi)+(j-0.5*nsampl)*width, loading[nblocks-1,j,:]/np.sum(loading[nblocks-1,j,:])*100,width,color=c)
-    stringj = "Loc %s (%s,%s), Loading=%.2e [g/m2]" % (str(j+1), str(LAT[j]), str(LON[j]),np.sum(loading[nblocks-1,j,:])*100 )
-    legend_strings.append(stringj)
+
+    if ( np.sum(loading[nblocks-1,j,:]) > 0.0 ):
+        c=next(color)
+        ax.bar(np.array(diam_phi)+(j-0.5*nsampl)*width, loading[nblocks-1,j,:]/np.sum(loading[nblocks-1,j,:])*100,width,color=c)
+        stringj = "Loc %s (%s,%s), Loading=%.2e [g/m2]" % (str(j+1), str(LAT[j]), str(LON[j]),np.sum(loading[nblocks-1,j,:])*100 )
+        legend_strings.append(stringj)
 
 ax.legend(legend_strings)
 
