@@ -47,7 +47,7 @@ d2 = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 
 duration_hhhh = '{0:04}'.format(int(str(d2.strftime("%H"))))
 
-diam = 2**(-np.asarray(diam_phi))
+diam = 2.0**(-np.asarray(diam_phi))
 
 # density in g/cc (calc density compute it in kg/m^3)
 density = calc_density(diam)/1000
