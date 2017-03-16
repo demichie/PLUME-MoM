@@ -9,7 +9,7 @@ from extract_wind import write_atm
 
 def calc_density(diam):
 
-    from input_file import *
+    from input_file import diam1, diam2, rho1, rho2, npart, diam_phi
 
     # diam is in millimiters while diam1 and diam2 are in meters
 

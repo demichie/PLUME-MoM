@@ -18,7 +18,6 @@ for f in filelist:
 
 filelist = glob.glob('*.CFG')
 for f in filelist:
-    if ( f != 'MAPTEXT.CFG' ):
         os.remove(f)
 
 

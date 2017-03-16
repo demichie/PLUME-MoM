@@ -9,8 +9,18 @@ from extract_wind import write_atm
 from input_file import *
 
 def round_minutes(dt, direction, resolution):
-    new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
-    return dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
+    if ( dt.minute%resolution == 0 ):
+
+        rounded_time = dt
+
+    else: 
+
+        new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
+
+        rounded_time = dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
+    return rounded_time
 
 
 # create a backup of the input file
@@ -34,6 +44,8 @@ f.close()
 filedata = filedata.replace("{vent_radius}", str(vent_radius) )
 
 filedata = filedata.replace("{log10_mfr}", str(log10_mfr) )
+
+filedata = filedata.replace("{gas_mass_fraction}", str(gas_mass_fraction) )
 
 filedata = filedata.replace("{npart}", str(npart) )
 
@@ -69,10 +81,12 @@ starttime_round = round_minutes(starttime_hhmm, 'down', 60) # arrotonda per dife
 endemittime_hhmm = datetime.datetime.strptime(endemittime,time_format)
 endemittime_round = round_minutes(endemittime_hhmm, 'up', 60) # arrotonda per eccesso endemittime
 
+print 'starttime',starttime_hhmm,starttime_round
+print 'endemittime',endemittime_hhmm,endemittime_round
+
 
 runtime=endemittime_round-starttime_round # numero ore arrotondate tra inizio e fine emissione 
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) ) # numero run di PlumeMoM
-
 
 for i in range(n_runs):
 

@@ -8,8 +8,18 @@ from part_density import calc_density
 from input_file import *
 
 def round_minutes(dt, direction, resolution):
-    new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
-    return dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
+    if ( dt.minute%resolution == 0 ):
+
+        rounded_time = dt
+
+    else: 
+
+        new_minute = (dt.minute // resolution + (1 if direction == 'up' else 0)) * resolution
+
+        rounded_time = dt + datetime.timedelta(minutes=new_minute - dt.minute)
+
+    return rounded_time
 
 time_format = "%y %m %d %H %M"
 
@@ -35,7 +45,9 @@ endemittime_round_down = round_minutes(endemittime_hhmm, 'down', 60)  # arrotond
 runtime=endemittime_round-starttime_round
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) )
 
+#if ( deltat_plumemom * n_runs == runtime.total_seconds() ):
 
+#    n_runs = n_runs-1
 
 d = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 duration_hhmm = str(d.strftime("%H%M"))
@@ -84,10 +96,12 @@ plume_hy = runname + '_{0:03}'.format(1)+'.hy'
 # time of the block
 timei =  datetime.datetime.strptime(starttime,time_format)
 
-timei_end = round_minutes(timei, 'up', 60)
+timei_end =  starttime_round+datetime.timedelta(seconds=deltat_plumemom)
 
 d = datetime.datetime(2000,1,1) + (timei_end-timei)
 duration_hhmm = str(d.strftime("%H%M"))
+
+print 'Block 1',duration_hhmm
 
 timei_str = timei.strftime("%Y %m %d %H")
 timei_str_mm = timei.strftime("%Y %m %d %H %M")
@@ -169,6 +183,7 @@ with open('EMITIMES','a') as emitimes:
 Central EMITIMES Blocks
 
 """
+
 # loop over the .hy files to write the blocks in EMITIMES
 for i in range(2,n_runs,1):
 
@@ -189,6 +204,9 @@ for i in range(2,n_runs,1):
     d = datetime.datetime(2000,1,1) + ( min(endemittime_hhmm,timei_end) - timei )
 
     duration_hhmm = str(d.strftime("%H%M"))
+
+    print 'Block',i,duration_hhmm
+
 
     timei_str = timei.strftime("%Y %m %d %H")
     timei_str_mm = timei.strftime("%Y %m %d %H %M")
@@ -232,6 +250,8 @@ for i in range(2,n_runs,1):
     b = b.reshape((-1,3))	
    
     # add lines in order to have all the blocks with the same lenght
+
+    print max_lines,b.shape[0]
 
     for i in range(max_lines-len(b)):
 
@@ -286,99 +306,107 @@ Final EMITIMES Block
 
 """
 
-
-# name of the .hy file
-plume_hy = runname + '_{0:03}'.format(n_runs)+'.hy'
-
-# time of the block
-timei =  endemittime_round_down
+if ( n_runs > 1):
 
 
-endemittime_round = round_minutes(endemittime_hhmm, 'up', 60)
-endemittime_round_down = round_minutes(endemittime_hhmm, 'down', 60)
+    # name of the .hy file
+    plume_hy = runname + '_{0:03}'.format(n_runs)+'.hy'
+
+    # time of the block
+    timei =  starttime_round+datetime.timedelta(seconds=(n_runs-1)*deltat_plumemom)
+
+    #timei =  endemittime_round_down
+
+  
+    endemittime_round = round_minutes(endemittime_hhmm, 'up', 60)
+    endemittime_round_down = round_minutes(endemittime_hhmm, 'down', 60)
+
+    timei_end = endemittime_round
+
+    d = datetime.datetime(2000,1,1) + (endemittime_hhmm-timei)
+    duration_hhmm = str(d.strftime("%H%M"))
+
+    print 'Block',n_runs,duration_hhmm
 
 
-timei_end = endemittime_round
+    timei_str = timei.strftime("%Y %m %d %H")
+    timei_str_mm = timei.strftime("%Y %m %d %H %M")
+
+    data=np.loadtxt(plume_hy,skiprows=1)
+
+
+    # data1: array containing data from .hy file, without x,z,h
+    data1=np.delete(data, [0,1,2], 1)
+
+    # array containing lat,lon and height for time i
+    b=[]
+
+    for i0 in range(len(data)):
+        x=data[i0,0] #[m]
+        y=data[i0,1] #[m] 
+        height=data[i0,2]-vent_height #[m] 	
+
+        # convert from m to lat lon	  
+        lon_col = lon + ((x*10**-3)/float(100))
+        lat_col = lat - ((y*10**-3)/float(100))
+
+        b.append([lat_col, lon_col, height])
+
+    b = np.asarray(b)
+    b = b.reshape((-1,3))	
+
+    # add lines in order to have all the blocks with the same lenght
+
+    print max_lines,b.shape[0]
+
+
+    for i in range(max_lines-len(b)):
+  
+        b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
+        data1 = np.vstack((data1,np.zeros(npart)))
+
+    # b1 is an array containing lat,lon and height for time i repeated npart times
+    b1=[]
+
+    for i0 in range(len(b)):    
+        for i1 in range(npart):
+            b1.append([b[i0,0],b[i0,1],b[i0,2]])
+
+    b1=np.asarray(b1)
+    b1=b1.reshape((-1,3))	
+
+    # data3 is the array to be written in EMITTIMES for every time interval
+    data3 = np.zeros((max_lines*npart,4))
+
+
+    for i0 in range(max_lines):
+
+        for i1 in range(npart):
+
+            data3[i1+i0*npart,0:3] = b1[i1+i0*npart,0:3]
+            data3[i1+i0*npart,3] = data1[i0,i1]
+
+
+    # mass released in one hour [kg]
+    emission_rate = data3[:,3]*3600
+
+    # released_mass_i: mass [kg] released during the simulation at i run time
+    released_mass_i=np.sum(emission_rate*duration_h)
+
+    released_mass=released_mass+released_mass_i
 
 
 
-d = datetime.datetime(2000,1,1) + (endemittime_hhmm-endemittime_round_down)
-duration_hhmm = str(d.strftime("%H%M"))
+    with open('EMITIMES','a') as emitimes:	
 
-timei_str = timei.strftime("%Y %m %d %H")
-timei_str_mm = timei.strftime("%Y %m %d %H %M")
+        emitimes.write(timei_str+' '+duration_hhhh+' '+str(len(data3))+'\n')	
 
-data=np.loadtxt(plume_hy,skiprows=1)
+        for h in range(len(data3)):
+            emitimes.write(timei_str_mm+' '+duration_hhmm+' '+
+                       str(data3[h,0]) + ' ' + str(data3[h,1]) + ' ' +
+                       str(data3[h,2]) + ' ' + str(emission_rate[h]) +
+                       ' 0.0 0.0\n')
 
-
-# data1: array containing data from .hy file, without x,z,h
-data1=np.delete(data, [0,1,2], 1)
-
-# array containing lat,lon and height for time i
-b=[]
-
-for i0 in range(len(data)):
-    x=data[i0,0] #[m]
-    y=data[i0,1] #[m] 
-    height=data[i0,2]-vent_height #[m] 	
-
-    # convert from m to lat lon	  
-    lon_col = lon + ((x*10**-3)/float(100))
-    lat_col = lat - ((y*10**-3)/float(100))
-
-    b.append([lat_col, lon_col, height])
-
-b = np.asarray(b)
-b = b.reshape((-1,3))	
-
-# add lines in order to have all the blocks with the same lenght
-
-for i in range(max_lines-len(b)):
-
-    b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
-
-data1 = np.vstack((data1,np.zeros(npart)))
-
-# b1 is an array containing lat,lon and height for time i repeated npart times
-b1=[]
-
-for i0 in range(len(b)):    
-    for i1 in range(npart):
-        b1.append([b[i0,0],b[i0,1],b[i0,2]])
-
-b1=np.asarray(b1)
-b1=b1.reshape((-1,3))	
-
-# data3 is the array to be written in EMITTIMES for every time interval
-data3 = np.zeros((max_lines*npart,4))
-
-for i0 in range(max_lines):
-
-    for i1 in range(npart):
-
-        data3[i1+i0*npart,0:3] = b1[i1+i0*npart,0:3]
-
-        data3[i1+i0*npart,3] = data1[i0,i1]
-
-# mass released in one hour [kg]
-emission_rate = data3[:,3]*3600
-
-# released_mass_i: mass [kg] released during the simulation at i run time
-released_mass_i=np.sum(emission_rate*duration_h)
-
-released_mass=released_mass+released_mass_i
-
-
-
-with open('EMITIMES','a') as emitimes:	
-
-    emitimes.write(timei_str+' '+duration_hhhh+' '+str(len(data3))+'\n')	
-
-    for h in range(len(data3)):
-        emitimes.write(timei_str_mm+' '+duration_hhmm+' '+
-                   str(data3[h,0]) + ' ' + str(data3[h,1]) + ' ' +
-                   str(data3[h,2]) + ' ' + str(emission_rate[h]) +
-                   ' 0.0 0.0\n')
 emitimes.close()
 
 # write CONTROL file

@@ -88,7 +88,7 @@ def calc_atm(profile,fields_list):
 def write_atm(time_input):
     """create atmosperic profile for plumemom """
 
-    from input_file import *
+    from input_file import hysplit_dir, meteo_file, lat, lon
 
     run_path = './'
 
