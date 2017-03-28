@@ -443,21 +443,6 @@ CONTAINS
        
     END DO main_loop
     
-    IF ( hysplit_flag ) THEN
-
-       IF ( nbl_stop ) THEN
-          
-          CALL write_hysplit(x_nbl,y_nbl,vent_height+height_nbl,.TRUE.)
-          
-       ELSE
-
-          
-          CALL write_hysplit(x,y,z,.TRUE.)
-          
-       END IF
-       
-    END IF
-
     max_idx = idx
 
     ALLOCATE( z_norm(max_idx) , w_norm(idx) )
@@ -497,8 +482,29 @@ CONTAINS
        WRITE(*,*) 'collapsing'
        
        column_regime = 3
+
+       IF ( hysplit_flag ) THEN
+
+          WRITE(*,*) 'WARNING: problem in hysplit file'
+          CALL write_hysplit(x,y,z,.TRUE.)
+
+       END IF
        
     ELSE
+
+       IF ( hysplit_flag ) THEN
+          
+          IF ( nbl_stop ) THEN
+             
+             CALL write_hysplit(x_nbl,y_nbl,vent_height+height_nbl,.TRUE.)
+             
+          ELSE
+                         
+             CALL write_hysplit(x,y,z,.TRUE.)
+             
+          END IF
+          
+       END IF
        
        IF ( check_sb .GT. eps_sb ) THEN
           

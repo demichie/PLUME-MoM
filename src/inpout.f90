@@ -831,13 +831,16 @@ CONTAINS
           
           coeff_lat = 1.d0 - ( lat - 75.d0 ) / ( 90.d0 - 75.d0 )
           
-          rho_atm_month_lat(1:n_atm_levels) = coeff_lat * rho_atm_month(1:n_atm_levels,7) &
+          rho_atm_month_lat(1:n_atm_levels) = coeff_lat *                       &
+               rho_atm_month(1:n_atm_levels,7)                                  &
                + ( 1.d0 - coeff_lat ) * rho_atm_month(1:n_atm_levels,8)
           
-          pres_atm_month_lat(1:n_atm_levels) = coeff_lat * pres_atm_month(1:n_atm_levels,7) &
+          pres_atm_month_lat(1:n_atm_levels) = coeff_lat *                      &
+               pres_atm_month(1:n_atm_levels,7)                                 &
                + ( 1.d0 - coeff_lat ) * pres_atm_month(1:n_atm_levels,8)
           
-          temp_atm_month_lat(1:n_atm_levels) = coeff_lat * temp_atm_month(1:n_atm_levels,7) &
+          temp_atm_month_lat(1:n_atm_levels) = coeff_lat *                      &
+               temp_atm_month(1:n_atm_levels,7)                                 &
                + ( 1.d0 - coeff_lat ) * temp_atm_month(1:n_atm_levels,8)
           
        END IF
