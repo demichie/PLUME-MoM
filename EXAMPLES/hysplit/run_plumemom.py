@@ -43,8 +43,6 @@ f.close()
 
 filedata = filedata.replace("{vent_radius}", str(vent_radius) )
 
-filedata = filedata.replace("{log10_mfr}", str(log10_mfr) )
-
 filedata = filedata.replace("{gas_mass_fraction}", str(gas_mass_fraction) )
 
 filedata = filedata.replace("{npart}", str(npart) )
@@ -88,6 +86,18 @@ print 'endemittime',endemittime_hhmm,endemittime_round
 runtime=endemittime_round-starttime_round # numero ore arrotondate tra inizio e fine emissione 
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) ) # numero run di PlumeMoM
 
+if ( len(log10_mfr) == 1 ):
+
+    log10_mfr = np.ones(nruns)*log10_mfr
+
+elif ( len(log10_mfr) != n_runs ):
+
+    print 'WARNING: check numbers of values of log10_mfr',len(log10_mfr),n_runs
+    sys.exit()
+
+    
+    
+
 for i in range(n_runs):
 
     runnamenew = runname + '_{0:03}'.format(i+1)
@@ -102,6 +112,10 @@ for i in range(n_runs):
 
     filedata = filedata.replace("{runname}", '"'+str(runnamenew)+'"' )
 
+
+    filedata = filedata.replace("{log10_mfr}", str(log10_mfr[i]) )
+
+    
     f.write(filedata)
     f.close()
 

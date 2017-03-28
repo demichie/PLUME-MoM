@@ -16,7 +16,7 @@ span_lat = 10.0
 span_lon = 10.0
 vent_height = 3300.0
 vent_radius = 50.0
-log10_mfr = 6.6
+log10_mfr = [6.6, 6.7]
 gas_mass_fraction = 0.03
 deltaz_release = 200.0
 
