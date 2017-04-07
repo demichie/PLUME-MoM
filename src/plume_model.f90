@@ -25,7 +25,7 @@
 
 PROGRAM plume_model
   
-  USE inpout, ONLY: initialize , read_inp
+  USE inpout, ONLY: initialize , read_inp , check_hysplit
   
   USE inpout, ONLY: open_file_units , close_file_units
 
@@ -58,8 +58,10 @@ PROGRAM plume_model
   
   !***  Solve the plume model
   CALL plumerise
-
+  
   CALL close_file_units
+
+  CALL check_hysplit
   
   CALL cpu_time(t2)
 

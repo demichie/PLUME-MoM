@@ -209,8 +209,8 @@ CONTAINS
 
     ELSEIF ( distribution_variable .EQ. "mass_fraction" ) THEN
 
-       solid_term = rho_mix * SUM( solid_mass_fraction(1:n_part) *              &
-            set_mom(1:n_part,0) )
+       ! See Eq. 34 PlumeMoM- GMD
+       solid_term = rho_mix * SUM( set_mom(1:n_part,0) * mom(1:i_part,0) )
 
     END IF
 
@@ -218,6 +218,10 @@ CONTAINS
 
     rhs_(1) = 2.D0 * r * rho_atm * ueps - prob_factor * 2.D0 * r *              &
          solid_term 
+
+    !WRITE(*,*) 'solid_term',  prob_factor * 2.D0 * r * solid_term 
+    !READ(*,*)
+
 
     !---- Horizontal momentum conservation   (Eq. 21 PlumeMoM - GMD)
     rhs_(2) = - r**2 * rho_mix * w * duatm_dz - u * prob_factor * 2.D0 * r *    &

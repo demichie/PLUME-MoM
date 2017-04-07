@@ -39,12 +39,12 @@ CONTAINS
     USE solver_module, ONLY: f_stepold
     USE variables, ONLY : verbose_level , inversion_flag
     USE variables, ONLY : dakota_flag , hysplit_flag , nbl_stop
-    USE variables, ONLY : pi_g
+    USE variables, ONLY : pi_g , height_nbl
     USE variables, ONLY : height_weight , height_obj , mu_weight ,    &
        mu_obj , sigma_weight , sigma_obj , skew_weight , skew_obj
 
     ! external procedures
-    USE inpout, ONLY: write_column , write_dakota , write_hysplit
+    USE inpout, ONLY: write_column , write_dakota
     USE meteo_module, ONLY: zmet, initialize_meteo
     USE mixture_module, ONLY: initialize_mixture
     USE particles_module, ONLY: initialize_particles
@@ -98,7 +98,7 @@ CONTAINS
     REAL*8 :: delta_rho
 
     REAL*8 :: plume_height
-    REAL*8 :: x_nbl , y_nbl , height_nbl       
+    REAL*8 :: x_nbl , y_nbl       
     REAL*8 :: deltarho_min
     REAL*8 :: rho_nbl
 
@@ -254,7 +254,7 @@ CONTAINS
 
     IF ( .NOT.dakota_flag ) CALL write_column
 
-    IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
+    ! IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
 
     deltarho_min = 1000.D0
 
@@ -430,7 +430,7 @@ CONTAINS
        
        IF ( .NOT.dakota_flag ) CALL write_column
        
-       IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
+       ! IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
        
 
        ! ----- Exit condition ---------------------------------------------------
@@ -479,14 +479,14 @@ CONTAINS
 
     IF ( delta_rho .GT. 0.d0 ) THEN
        
-       WRITE(*,*) 'collapsing'
+       WRITE(*,*) 'Plume Regime: Collapsing'
        
        column_regime = 3
 
        IF ( hysplit_flag ) THEN
 
           WRITE(*,*) 'WARNING: problem in hysplit file'
-          CALL write_hysplit(x,y,z,.TRUE.)
+          ! CALL write_hysplit(x,y,z,.TRUE.)
 
        END IF
        
@@ -496,11 +496,11 @@ CONTAINS
           
           IF ( nbl_stop ) THEN
              
-             CALL write_hysplit(x_nbl,y_nbl,vent_height+height_nbl,.TRUE.)
+             ! CALL write_hysplit(x_nbl,y_nbl,vent_height+height_nbl,.TRUE.)
              
           ELSE
                          
-             CALL write_hysplit(x,y,z,.TRUE.)
+             ! CALL write_hysplit(x,y,z,.TRUE.)
              
           END IF
           
@@ -510,13 +510,13 @@ CONTAINS
           
           !WRITE(*,*) 'w_minrel,w_maxrel,w_maxabs',w_minrel,w_maxrel,w_maxabs
           
-          WRITE(*,*) 'superbuoyant'
+          WRITE(*,*) 'Plume Regime: Superbuoyant'
           
           column_regime = 2
           
        ELSE
           
-          WRITE(*,*) 'buoyant'
+          WRITE(*,*) 'Plume Regime: Buoyant'
           
           column_regime = 1
           
@@ -614,11 +614,11 @@ CONTAINS
        CALL WRITE_DAKOTA(description,obj_function)
        
 
-       WRITE(*,*) 'plume_height,obj_function' , plume_height , obj_function
+       WRITE(*,*) 'Plume_height,obj_function' , plume_height , obj_function
 
     END IF
 
-    WRITE(*,*) 'neutral buoyance level height = ',height_nbl
+    WRITE(*,*) 'Neutral buoyance level height =',height_nbl
 
 
     RETURN

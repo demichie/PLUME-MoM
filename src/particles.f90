@@ -21,13 +21,13 @@ MODULE particles_module
 
   !> volume fraction of the particle phases with respect to the total solid
   REAL*8, ALLOCATABLE, DIMENSION(:) :: solid_partial_volume_fraction
-  
+
   !> mass fraction of the particle phases with respect to the mixture
   REAL*8, ALLOCATABLE, DIMENSION(:) :: solid_mass_fraction
 
   !> volume fraction of the particle phases with respect to the mixture
   REAL*8, ALLOCATABLE, DIMENSION(:) :: solid_volume_fraction
-    
+
   !> Moments of the particles diameter
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: mom
 
@@ -109,7 +109,7 @@ CONTAINS
   !> @author 
   !> Mattia de' Michieli Vitturi
   !******************************************************************************
- 
+
   SUBROUTINE allocate_particles
 
     IMPLICIT NONE
@@ -135,7 +135,7 @@ CONTAINS
     ALLOCATE ( rho1(n_part) )
     ALLOCATE ( diam2(n_part) )
     ALLOCATE ( rho2(n_part) )
-    
+
     ALLOCATE ( cp_part(n_part) )
 
   END SUBROUTINE allocate_particles
@@ -150,7 +150,7 @@ CONTAINS
   !> @author 
   !> Mattia de' Michieli Vitturi
   !******************************************************************************
- 
+
   SUBROUTINE initialize_particles
 
     USE moments_module, ONLY : wheeler_algorithm , moments_correction
@@ -164,7 +164,7 @@ CONTAINS
     INTEGER :: i_part
 
     DO i_part=1,n_part
- 
+
        mom(i_part,:) = mom0(i_part,0:n_mom-1)
 
        ! CALL moments_correction(mom(i_part,:),iter)
@@ -191,7 +191,7 @@ CONTAINS
 
        END IF
 
-          
+
     END DO
 
     CALL eval_particles_moments( xi(1:n_part,:) , w(1:n_part,:) ) 
@@ -221,18 +221,23 @@ CONTAINS
     USE variables, ONLY : gi , pi_g , verbose_level
 
     IMPLICIT NONE
-    
+
     REAL*8 :: particles_settling_velocity
 
     INTEGER, INTENT(IN) :: i_part
     REAL*8, INTENT(IN) :: diam_in
-    
+
     REAL*8 :: diam
 
     REAL*8 :: rhop
-    
+
     REAL*8 :: k1 , k2 , k3
-    REAL*8 :: CD
+    REAL*8 :: CD , CD1 , CD2
+
+    REAL*8 :: Reynolds , Reynoldsk1k2
+    REAL*8 :: Vinit , Vg_Ganser
+
+    INTEGER :: i
 
     !> cross sectional area
     REAL*8 :: A_cs
@@ -268,38 +273,74 @@ CONTAINS
     ELSE
 
        diam = diam_in
-       
+
     END IF
 
     rhop = particles_density(i_part,diam_in)
-    
+
     IF ( settling_model .EQ. 'textor' ) THEN
 
-    ! Textor et al. 2006
- 
-    IF ( diam .LE. 1.D-4 ) THEN
+       ! Textor et al. 2006
 
-       k1 = 1.19D5   ! (m^2 kg^-1 s^-1 )
+       IF ( diam .LE. 1.D-4 ) THEN
 
-       particles_settling_velocity = k1 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
-            ( 0.5D0 * diam )**2
+          k1 = 1.19D5   ! (m^2 kg^-1 s^-1 )
 
-    ELSEIF ( diam .LE. 1.D-3 ) THEN
+          particles_settling_velocity = k1 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
+               ( 0.5D0 * diam )**2
 
-       k2 = 8.D0    ! (m^3 kg^-1 s^-1 )
+       ELSEIF ( diam .LE. 1.D-3 ) THEN
 
-       particles_settling_velocity = k2 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
-            ( 0.5D0 * diam )
+          k2 = 8.D0    ! (m^3 kg^-1 s^-1 )
 
-    ELSE 
-    
-       k3 = 4.833D0 ! (m^2 kg^-0.5 s^-1 )
-       CD = 0.75D0
+          particles_settling_velocity = k2 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
+               ( 0.5D0 * diam )
 
-       particles_settling_velocity = k3 * SQRT( rhop / CD ) * SQRT(  rho_atm0   &
-            / rho_atm ) * SQRT( 0.5D0 * diam )
+       ELSE 
 
-    END IF
+          k3 = 4.833D0 ! (m^2 kg^-0.5 s^-1 )
+          CD = 0.75D0
+
+          particles_settling_velocity = k3 * SQRT( rhop / CD ) * SQRT(  rho_atm0   &
+               / rho_atm ) * SQRT( 0.5D0 * diam )
+
+       END IF
+
+    ELSEIF ( settling_model .EQ. 'ganser' ) THEN 
+
+       Vinit = diam**2 * gi * ( rhop - rho_atm ) / (18.D0*visc_atm)
+
+       DO i=1,10
+          
+          IF (i.EQ.1) REYNOLDS = rho_atm * Vinit * diam / visc_atm
+          
+          K1 = 3.0/(1.0+2.0*(shape_factor**(-0.5)))
+          
+          K2 = 10.0**(1.8148*((-1.0*log10(shape_factor))**0.5743))
+          
+          REYNOLDSK1K2 = REYNOLDS * K1 * K2
+          
+          CD1 = K2 * 24.0 / REYNOLDSK1K2  *                                     &
+               ( 1.D0 + 0.1118 * REYNOLDSK1K2**0.6567 )
+          
+          CD2 = 0.4305 * K2 / ( 1.0 + 3305.0 / REYNOLDSK1K2 )
+          
+          CD = CD1 + CD2
+          
+          VG_GANSER = ( ( 4.0 * gi * diam * ( rhop - rho_atm ) )                &
+               / ( 3.D0 * CD * rho_atm) )**0.5
+
+          REYNOLDS = rho_atm * VG_GANSER * diam / visc_atm
+          
+       ENDDO
+
+       particles_settling_velocity = Vg_Ganser
+       IF ( Vg_Ganser .LE. 0.D0 ) THEN
+
+          WRITE(*,*) 'NEGATIVE VALUE', Vinit,Vg_Ganser
+
+       END IF
+
 
     ELSEIF ( settling_model .EQ. 'pfeiffer' ) THEN
 
@@ -342,14 +383,14 @@ CONTAINS
        Us = Us_1000
 
        IF ( ( Rey1 .GT. 0.D0 ) .AND. ( Rey1 .LE. 100.D0 ) ) THEN
-    
+
           ! For small Reynolds numbers the drag coefficient is given by Eq.8
           ! of Pfeiffer et al. 2005 and the settling velocity is Us_1
 
           Us = Us_1  
-             
+
        ELSEIF ( ( Rey1 .GT. 100.D0 ) .AND. ( Rey1 .LE. 1000.D0 ) ) THEN
-    
+
           ! For intermediate Reyonlds numbers, 100<Re<1000, the drag coefficient 
           ! is linearly interpolated between Cd_100 and Cd_1000
 
@@ -358,27 +399,27 @@ CONTAINS
           Us = sqrt( 2 * mass * gi / ( Cd_interp * rho_atm * A_cs ) )
 
        ELSEIF ( Rey1 .GT. 1000.D0 ) THEN
-    
+
           ! For large Reynolds numbers the drag coefficient is taken as Cd=1,
           ! as in Pfeiffer et al. 2005 with the settling velocity is Us_1000
 
           Us = Us_1000
-       
+
        END IF
 
        IF ( ( Rey2 .GT. 0.D0 ) .AND. ( Rey2 .LE. 100.D0 ) ) THEN 
-    
+
           Us = Us_2
-    
+
        ELSEIF ( ( Rey2 .GT. 100.D0 ) .AND. ( Rey2 .LE. 1000.D0 ) ) THEN 
-    
+
           Cd_interp = Cd_100 + ( Rey2 - 100 ) / ( 1000 - 100 ) * ( Cd_1000 - Cd_100)
           Us = sqrt( 2 * mass * gi / ( Cd_interp * rho_atm * A_cs ) )
 
        ELSEIF ( Rey2 .GT. 1000.D0 ) THEN
-    
+
           Us = Us_1000
-       
+
        END IF
 
        particles_settling_velocity = Us
@@ -389,6 +430,9 @@ CONTAINS
        STOP
 
     END IF
+
+    !WRITE(*,*) 'diam,Us',diam,Us
+    !READ(*,*)
 
   END FUNCTION particles_settling_velocity
 
@@ -475,11 +519,11 @@ CONTAINS
 
        particles_density = rho1(i_part) + ( diam_phi - diam1_phi ) /            &
             ( diam2_phi - diam1_phi ) * ( rho2(i_part) - rho1(i_part) )
-       
+
     ELSE
 
        particles_density = rho2(i_part)
-       
+
     END IF
 
     RETURN
@@ -547,7 +591,7 @@ CONTAINS
   FUNCTION aggregation_kernel(i_part,diam1,diam2)
 
     IMPLICIT NONE
-    
+
     REAL*8 :: aggregation_kernel
 
     INTEGER, INTENT(IN) :: i_part
@@ -558,7 +602,7 @@ CONTAINS
     REAL*8 :: alfa
 
     beta = collision_kernel(i_part,diam1,diam2)
-    
+
     alfa = coalescence_efficiency(i_part,diam1,diam2)
 
     aggregation_kernel = beta * alfa
@@ -583,7 +627,7 @@ CONTAINS
     USE variables, ONLY: pi_g
 
     IMPLICIT NONE
-    
+
     REAL*8 :: collision_kernel
 
     INTEGER, INTENT(IN) :: i_part
@@ -619,11 +663,11 @@ CONTAINS
 
     REAL*8 :: tp
 
-    !!! WARNING: uninitialized variable
+!!! WARNING: uninitialized variable
     air_kin_viscosity = 1.5D-5
     tp = 1000.D0
     epsilon = 1.D0
-    !!!
+!!!
 
     k_b =1.3806488D-23 
 
@@ -661,7 +705,7 @@ CONTAINS
     USE variables, ONLY : gi
 
     IMPLICIT NONE
-    
+
     REAL*8 :: collision_efficiency
 
     INTEGER, INTENT(IN) :: i_part
@@ -680,10 +724,10 @@ CONTAINS
     REAL*8 :: Vs_1 , Vs_2
 
 
-    !!! WARNING: uninitialized variable
+!!! WARNING: uninitialized variable
     kin_visc_air = 1.5D-5
     E_A = 0.D0
-    !!!
+!!!
 
     Vs_1 = particles_settling_velocity(i_part,diam1)
 
@@ -692,13 +736,13 @@ CONTAINS
     IF ( diam1 .GT. diam2 ) THEN
 
        Re = diam1 * Vs_1 / kin_visc_air
-       
+
        Stokes = 2.D0 * Vs_2 * ABS( Vs_1 - Vs_2 ) / diam1 * gi
 
     ELSE
 
        Re = diam2 * Vs_2 / kin_visc_air 
-       
+
        Stokes = 2.D0 * Vs_1 * ABS( Vs_2 - Vs_1 ) / diam2 * gi
 
     END IF
@@ -737,7 +781,7 @@ CONTAINS
     USE variables, ONLY: gi
 
     IMPLICIT NONE
-    
+
     REAL*8 :: coalescence_efficiency
 
     INTEGER :: i_part
@@ -758,14 +802,14 @@ CONTAINS
 
     REAL*8 :: tp
 
-    !!! UNINITIALIZED VARIALBES: CHECK
+!!! UNINITIALIZED VARIALBES: CHECK
     tp = 1000
-    !!!
+!!!
 
     IF ( tp .LE. 273 ) THEN
 
        coalescence_efficiency = 0.09D0
-       
+
     ELSE
 
        Vs_1 = particles_settling_velocity(i_part,diam1)
@@ -775,15 +819,15 @@ CONTAINS
        IF ( diam1 .GT. diam2 ) THEN
 
           Stokes = 2.D0 * Vs_2 * ABS( Vs_1 - Vs_2 ) / diam1 * gi
-          
+
        ELSE
-          
+
           Stokes = 2.D0 * Vs_1 * ABS( Vs_2 - Vs_1 ) / diam2 * gi
-          
+
        END IF
 
        Stokes_cr = 1.3D0
-     
+
        q = 0.8D0
 
        coalescence_efficiency = 1.D0 / ( 1.D0 + ( Stokes / Stokes_cr ) ) ** q 
@@ -832,16 +876,16 @@ CONTAINS
     DO i_part=1,n_part
 
        DO j=1,n_nodes
-          
+
           part_dens_array(i_part,j) = particles_density( i_part , xi(i_part,j) )
-          
+
           part_set_vel_array(i_part,j) = particles_settling_velocity( i_part ,  &
                xi(i_part,j) ) 
 
           part_cp_array(i_part,j) = particles_heat_capacity( i_part,xi(i_part,j))  
 
           IF ( aggregation) THEN
-         
+
              DO j2=1,n_nodes
 
                 part_beta_array(i_part,j,j2) = particles_beta( xi(i_part,j) ,   &
@@ -850,7 +894,7 @@ CONTAINS
              END DO
 
           END IF
- 
+
        END DO
 
        IF ( verbose_level .GE. 2 ) THEN
@@ -868,15 +912,15 @@ CONTAINS
 
 
     DO i_part=1,n_part
-       
+
        DO i=0,n_mom-1
-          
+
           set_mom(i_part,i) = SUM( part_set_vel_array(i_part,:) * w(i_part,:)   &
                * xi(i_part,:)**i ) / mom(i_part,i)
-          
+
           rhop_mom(i_part,i) = SUM( part_dens_array(i_part,:) * w(i_part,:)     &
                * xi(i_part,:)**i ) / mom(i_part,i)
-        
+
           cp_rhop_mom(i_part,i) = SUM( part_cp_array(i_part,:)                  &
                * part_dens_array(i_part,:) * w(i_part,:) * xi(i_part,:)**i )    &
                / mom(i_part,i) 
@@ -884,7 +928,7 @@ CONTAINS
           set_rhop_mom(i_part,i) = SUM( part_set_vel_array(i_part,:)            &
                *  part_dens_array(i_part,:) * w(i_part,:) * xi(i_part,:)**i )   &
                / mom(i_part,i) 
-          
+
           set_cp_rhop_mom(i_part,i) = SUM( part_set_vel_array(i_part,:)         &
                * part_cp_array(i_part,:) * part_dens_array(i_part,:) *          &
                w(i_part,:) * xi(i_part,:)**i ) / mom(i_part,i) 
@@ -897,21 +941,21 @@ CONTAINS
 
              birth_term(i_part,i) = 0.D0
              death_term(i_part,i) = 0.D0
-             
+
              DO j1=1,n_nodes
-                
+
                 DO j2=1,n_nodes
-                   
+
                    birth_term(i_part,i) = birth_term(i_part,i) + w(i_part,j1)   &
                         * w(i_part,j2) * part_beta_array(i_part,j1,j2)          &
                         *( xi(i_part,j1)**3 + xi(i_part,j2)**3 ) ** ( i / 3.D0 )
-                   
+
                    death_term(i_part,i) = death_term(i_part,i) - w(i_part,j1)   &
                         * xi(i_part,j1) * part_beta_array(i_part,j1,j2)         &
                         * w(i_part,j1) * w(i_part,j2) 
-                   
+
                 END DO
-                
+
              END DO
 
              birth_term(i_part,i) = 0.5D0 * birth_term(i_part,i)
@@ -919,7 +963,7 @@ CONTAINS
           END IF
 
        END DO
-              
+
     END DO
 
     RETURN

@@ -83,6 +83,10 @@ MODULE inpout
 
   INTEGER :: hy_lines
 
+  INTEGER :: read_col_unit
+
+  INTEGER :: col_lines
+
   !> hysplit scratch unit
   INTEGER :: temp_unit
 
@@ -122,7 +126,7 @@ MODULE inpout
        initial_neutral_density , gas_mass_fraction0 , vent_height , ds0 ,       &
        n_part , distribution , distribution_variable , n_mom
  
-  NAMELIST / hysplit_parameters / hy_deltaz , nbl_stop
+  NAMELIST / hysplit_parameters / hy_deltaz , nbl_stop , n_cloud
  
   NAMELIST / mixture_parameters / diam1 , rho1 , diam2 , rho2 , cp_part ,       &
        rwvapour , cpwvapour
@@ -1235,8 +1239,6 @@ CONTAINS
 
     END IF
 
-
-
     DO i_part = 1,n_part
 
        ! the volume fraction of the particle phases ( with respect to the
@@ -1495,10 +1497,10 @@ CONTAINS
 
     END IF
 
-    IF ( hysplit_flag ) THEN
+    n_unit = n_unit + 1
+    hy_unit = n_unit
 
-       n_unit = n_unit + 1
-       hy_unit = n_unit
+    IF ( hysplit_flag ) THEN
        
        OPEN(hy_unit,FILE=hy_file)
 
@@ -1582,6 +1584,8 @@ CONTAINS
 
     IF ( z .EQ. vent_height ) THEN
 
+       col_lines = 0
+
        WRITE(col_unit,97,advance="no")
        
        DO i_part=1,n_part
@@ -1604,6 +1608,8 @@ CONTAINS
        
 
     END IF
+
+    col_lines = col_lines + 1
 
     WRITE(col_unit,100) z , r , x , y , rho_mix , tp - 273.15D0 , w , mag_u,&
          atm_mass_fraction , wvapour_mass_fraction ,                        &
@@ -1638,227 +1644,6 @@ CONTAINS
   END SUBROUTINE write_column
 
   !*****************************************************************************
-  !> \brief Write outputs
-  !
-  !> This subroutine writes the output values on the output files. The values
-  !> are saved along the column.
-  !> \date 28/10/2013
-  !> @author 
-  !> Mattia de' Michieli Vitturi
-  !******************************************************************************
-
-  SUBROUTINE write_hysplit(x,y,z,last)
-
-    USE particles_module, ONLY: n_part , solid_partial_mass_fraction
-
-    USE plume_module, ONLY: r , mag_u
-    USE mixture_module, ONLY: rho_mix , gas_mass_fraction
-
-
-
-    IMPLICIT NONE
-    
-    REAL*8, INTENT(IN) :: x,y,z
-
-    LOGICAL, INTENT(IN) :: LAST
-
-    INTEGER :: i_part ,i
-
-    CHARACTER(len=8) :: x1 ! format descriptor
-
-    REAL*8 :: xtemp,ytemp,ztemp
-    REAL*8 :: zold
-    REAL*8 :: znew
-
-    REAL*8, ALLOCATABLE :: solid_temp(:)
-
-    INTEGER :: nbl_lines
-
-    IF ( z .EQ. vent_height ) THEN
-
-       hy_lines = 0
-
-       hy_x_old = x
-       hy_y_old = y
-       hy_z_old = z
-
-  
-       solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) *  ( 1.D0 -   &
-            gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
-
-       IF ( nbl_stop ) THEN
-
-          ALLOCATE( solid_mfr_init(1:n_part) ) 
-          ALLOCATE( solid_mfr_oldold(1:n_part) ) 
-
-          solid_mfr_init(1:n_part) = solid_mfr(1:n_part)
-
-          n_unit = n_unit + 1
-          temp_unit = n_unit
-          OPEN(temp_unit, status='SCRATCH' )
-
-       END IF
-
-       IF ( verbose_level .GE. 1 ) THEN
-
-          WRITE(*,*) 'Solid mass flow rate: ',solid_mfr(1:n_part)
-
-       END IF
-
-       WRITE(hy_unit,107,advance="no")
-       
-       DO i_part=1,n_part
-          
-       WRITE(x1,'(I2.2)') i_part ! converting integer to string using a 'internal file'
-
-          WRITE(hy_unit,108,advance="no") 'S mfr'//trim(x1)//' (kg/s)'
-          
-       END DO
-
-       WRITE(hy_unit,*) ''
-      
-    ELSEIF ( z .GE. hy_z ) THEN
-       
-       hy_lines = hy_lines + 1
-
-       solid_mfr_old(1:n_part) = solid_mfr(1:n_part)
-       
-       solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
-            gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
-       
-       WRITE(hy_unit,110) 0.5D0 * ( x +  hy_x_old ) ,                           &
-            0.5D0 * ( y +  hy_y_old ) , 0.5D0 * ( z +  hy_z_old ) ,             &
-            solid_mfr_old(1:n_part) - solid_mfr(1:n_part)
-
-       hy_x_old = hy_x
-       hy_y_old = hy_y
-       hy_z_old = hy_z
-       
-       hy_x = x
-       hy_y = y
-       hy_z = hy_z + hy_deltaz
-       
-    END IF
-    
-    IF ( last ) THEN
-
-       IF ( ( nbl_stop ) .AND. ( z .LT. hy_z_old ) ) THEN
-
-          ALLOCATE( solid_temp(1:n_part) )
-
-          REWIND(hy_unit)
-          READ(hy_unit,*) 
-
-          solid_mfr_old(1:n_part) = solid_mfr_init(1:n_part)
-
-          nbl_lines = -1
-          
-          READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-
-          nbl_lines = nbl_lines + 1
-          
-          znew = ztemp - 0.5D0 * hy_deltaz
-      
-          solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
-          solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
-          
-          nbl_loop:DO WHILE ( ( znew .LT. z ) .AND. ( nbl_lines + 1 < hy_lines ) )
-             
-             READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-             
-             zold = znew
-            
-             IF  ( z .GT. ztemp - 0.5D0 * hy_deltaz ) THEN
-                
-                nbl_lines = nbl_lines + 1
-    
-                znew = ztemp - 0.5D0 * hy_deltaz
-                
-                solid_mfr_oldold(1:n_part) = solid_mfr_old(1:n_part)
-                solid_mfr_old(1:n_part) = solid_mfr_old(1:n_part) - solid_temp(1:n_part)
-             
-             ELSE
-                
-                EXIT nbl_loop
-                
-             END IF
-             
-          END DO nbl_loop
-
-          hy_z_old = znew
-
-          solid_mfr_old(1:n_part) = solid_mfr_oldold(1:n_part)
-
-          REWIND(hy_unit)
-          READ(hy_unit,*) 
-
-          DO i = 1,nbl_lines
-
-             READ(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-             WRITE(temp_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-
-          END DO
-
-          REWIND(temp_unit)                     ! back to the beginning of SCRATCH
-
-          CLOSE(hy_unit, STATUS = 'DELETE' )   ! delete original
-
-          OPEN(hy_unit,FILE=hy_file)
-
-          WRITE(hy_unit,107,advance="no")
-          
-          DO i_part=1,n_part
-             
-             WRITE(x1,'(I2.2)') i_part ! converting integer to string using a 'internal file'
-             
-             WRITE(hy_unit,108,advance="no") 'S mfr'//trim(x1)//' (kg/s)'
-             
-          END DO
-          
-          WRITE(hy_unit,*) ''
-       
-          DO i = 1,nbl_lines
-
-             READ(temp_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-             WRITE(hy_unit,110), xtemp,ytemp,ztemp,solid_temp(1:n_part)
-
-          END DO
- 
-          CLOSE(temp_unit, STATUS = 'DELETE')                      ! delete
-
-
-       ELSE
-
-          solid_mfr_old(1:n_part) = solid_mfr(1:n_part)
-          
-       END IF
-
-       solid_mfr(1:n_part) = solid_partial_mass_fraction(1:n_part) * ( 1.D0 -   &
-            gas_mass_fraction) * pi_g * mag_u * r**2.D0 * rho_mix 
-       
-       hy_x = x
-       hy_y = y
-       hy_z = z
-       
-       WRITE(hy_unit,110) 0.5D0 * ( hy_x +  hy_x_old ) , 0.5D0 * ( hy_y +       &
-            hy_y_old ) , 0.5D0 * ( hy_z +  hy_z_old ) , solid_mfr_old(1:n_part) &
-            - solid_mfr(1:n_part)
-       
-       WRITE(hy_unit,110) hy_x , hy_y , hy_z , solid_mfr(1:n_part)
-       
-    END IF
-
-107     FORMAT(1x,'     x (m)     ',1x,'      y (m)    ', 1x,'     z (m)     ')
-       
-108     FORMAT(2x,A)
-
-110 FORMAT(33(1x,e15.8))
- 
-    RETURN
-
-  END SUBROUTINE write_hysplit
-
-  !*****************************************************************************
   !> \brief Dakota outputs
   !
   !> This subroutine writes the output values used for the sensitivity analysis
@@ -1891,6 +1676,346 @@ CONTAINS
 
   END SUBROUTINE write_dakota
   
+
+  SUBROUTINE check_hysplit
+
+
+    USE meteo_module, ONLY: rho_atm , ta, pa , interp_1d_scalar
+    USE meteo_module, ONLY : cos_theta , sin_theta , u_atm , zmet 
+
+    USE particles_module, ONLY: n_mom , n_part , solid_partial_mass_fraction , &
+         mom , set_mom
+
+    USE plume_module, ONLY: x , y , z , w , r , mag_u
+    USE mixture_module, ONLY: rho_mix , tp , atm_mass_fraction ,               &
+         wvapour_mass_fraction
+
+    USE variables, ONLY : height_nbl
+
+    IMPLICIT NONE
+
+    CHARACTER(len=8) :: x1 ! format descriptor
+
+    INTEGER :: i , j , n_hy
+
+    REAL*8 :: temp_k,mfr
+    REAL*8, ALLOCATABLE :: x_col(:) , y_col(:) , z_col(:) , r_col(:) 
+    REAL*8, ALLOCATABLE :: solid_pmf(:,:) , gas_mf(:) , mfr_col(:)
+    REAL*8, ALLOCATABLE :: solid_mass_flux(:,:) , solid_mass_loss_cum(:,:)
+    REAL*8 :: z_min , z_max , z_bot , z_top , x_top , x_bot , y_bot , y_top
+    REAL*8 :: r_bot , r_top
+    REAL*8 :: solid_bot , solid_top
+    REAL*8, ALLOCATABLE :: delta_solid(:) , cloud_solid(:)
+    REAL*8, ALLOCATABLE :: solid_tot(:)
+
+
+    REAL*8 :: angle_release , start_angle
+    REAL*8 :: delta_angle
+    REAL*8 :: dx , dy
+
+    ALLOCATE( x_col(col_lines) , y_col(col_lines) , z_col(col_lines) )
+    ALLOCATE( r_col(col_lines) )
+    ALLOCATE( solid_pmf(n_part,col_lines) )
+    ALLOCATE( gas_mf(col_lines) )
+    ALLOCATE( mfr_col(col_lines) )
+    ALLOCATE( solid_mass_flux(n_part,col_lines) )
+    ALLOCATE( solid_mass_loss_cum(n_part,col_lines) )
+    ALLOCATE( delta_solid(n_part) , cloud_solid(n_part) ) 
+    ALLOCATE( solid_tot(n_part) )
+
+    n_unit = n_unit + 1
+    read_col_unit = n_unit
+    
+    OPEN(read_col_unit,FILE=col_file)
+
+    READ(read_col_unit,*)
+
+    WRITE(*,*) 'col_lines',col_lines
+
+    DO i = 1,col_lines
+
+       READ(read_col_unit,111) z_col(i) , r_col(i) , x_col(i) , y_col(i) , rho_mix ,   &
+            temp_k , w , mag_u , atm_mass_fraction , wvapour_mass_fraction ,    &
+            solid_pmf(1:n_part,i) , rho_atm , mfr_col(i) , ta , pa
+
+       gas_mf(i) = atm_mass_fraction + wvapour_mass_fraction
+
+       solid_mass_flux(1:n_part,i) =  solid_pmf(1:n_part,i) * (1.D0-gas_mf(i))  &
+            * rho_mix * pi_g * r_col(i)**2 * mag_u
+
+       solid_mass_loss_cum(1:n_part,i) = 1.D0 -  solid_mass_flux(1:n_part,i) /  &
+            solid_mass_flux(1:n_part,1)
+
+       ! WRITE(*,*) z_col(i) , solid_mass_loss_cum(1:n_part,i)
+       ! READ(*,*)
+
+    END DO
+
+111 FORMAT(33(1x,e15.8))
+
+    CLOSE(read_col_unit)    
+    
+    OPEN(hy_unit,FILE=hy_file)
+    
+    WRITE(hy_unit,107,advance="no")
+    
+    DO i=1,n_part
+       
+       WRITE(x1,'(I2.2)') i ! converting integer to string using a 'internal file'
+       
+       WRITE(hy_unit,108,advance="no") 'S mfr'//trim(x1)//' (kg/s)'
+       
+    END DO
+    
+
+    WRITE(hy_unit,*) ''
+
+    z_min = z_col(1)
+
+    IF ( nbl_stop ) THEN
+
+       z_max = height_nbl + z_min
+
+    ELSE
+
+       z_max = z_col(col_lines)
+       
+    END IF
+
+  
+    ! WRITE(*,*) 'z_min',z_min
+  
+    n_hy = FLOOR( ( z_max - z_min ) / hy_deltaz )
+
+    solid_tot(1:n_part) = 0.D0
+    WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',z_min,SUM(solid_tot)
+
+    DO i = 1,n_hy
+
+       z_bot = z_min + (i-1) * hy_deltaz
+       z_top = z_min + i * hy_deltaz
+
+       z = z_bot 
+
+       CALL zmet
+
+       ! WRITE(*,*) 'wind',u_atm,DATAN2(sin_theta,cos_theta)
+
+       DO j = 1,n_part
+
+          CALL interp_1d_scalar(z_col, solid_mass_flux(j,:), z_bot, solid_bot)
+          CALL interp_1d_scalar(z_col, solid_mass_flux(j,:), z_top, solid_top)
+
+          CALL interp_1d_scalar(z_col, x_col, z_bot, x_bot)
+          CALL interp_1d_scalar(z_col, x_col, z_top, x_top)
+
+          CALL interp_1d_scalar(z_col, x_col, z_bot, y_bot)
+          CALL interp_1d_scalar(z_col, x_col, z_top, y_top)
+
+          CALL interp_1d_scalar(z_col, r_col, z_bot, r_bot)
+          CALL interp_1d_scalar(z_col, r_col, z_top, r_top)
+          
+          delta_solid(j) = solid_bot - solid_top
+
+          ! WRITE(*,*) 'solid_bot,solit_top',j,solid_bot,solid_top
+
+       END DO
+
+       ! WRITE(*,*) 'delta_solid',SUM(delta_solid)
+
+
+       IF ( n_cloud .EQ. 1 ) THEN
+          
+          IF ( verbose_level .GE. 1 ) THEN
+             
+             WRITE(*,110) 0.5D0 * ( x_top + x_bot ) , 0.5D0 * ( y_top + y_bot ) ,     &
+                  0.5D0 * ( z_top + z_bot ) , delta_solid(1:n_part)
+             
+          END IF
+          
+          WRITE(hy_unit,110) 0.5D0 * ( x_top + x_bot ) , 0.5D0 * ( y_top + y_bot ) ,     &
+               0.5D0 * ( z_top + z_bot ) , delta_solid(1:n_part)
+          
+       ELSE
+       
+          IF ( u_atm .LT. 1.0D-1 ) THEN
+   
+             delta_angle = 2.D0*pi_g/n_cloud
+          
+          ELSE
+
+             delta_angle = pi_g / ( n_cloud - 1.D0 )
+
+          END IF
+
+          DO j=1,n_cloud
+             
+             start_angle =  DATAN2(sin_theta,cos_theta)
+             angle_release = (j-1) * delta_angle - 0.5D0*pi_g
+
+             dx = 0.5* ( r_bot + r_top ) * DCOS(start_angle + angle_release)
+             dy = 0.5* ( r_bot + r_top ) * DSIN(start_angle + angle_release)
+
+             !WRITE(*,*) 'dx,dy',dx,dy,start_angle,angle_release
+             !READ(*,*)
+             
+             IF ( verbose_level .GE. 1 ) THEN
+                
+                WRITE(*,110)  0.5D0 * ( x_top + x_bot ) + dx ,                  &
+                     0.5D0 * ( y_top + y_bot ) + dy , 0.5D0 * ( z_top + z_bot ),&
+                     delta_solid(1:n_part)/n_cloud
+                
+             END IF
+             
+             WRITE(hy_unit,110)   0.5D0 * ( x_top + x_bot ) + dx ,              &
+                  0.5D0 * ( y_top + y_bot ) + dy , 0.5D0 * ( z_top + z_bot ) ,  &
+                  delta_solid(1:n_part)/n_cloud
+             
+          END DO
+          
+       END IF
+       
+       solid_tot(1:n_part) = solid_tot(1:n_part) + delta_solid(1:n_part)
+       ! WRITE(*,*) 'Solid mass released in the atmosphere (kg): ', 0.5D0 * ( z_top + z_bot ) , SUM(solid_tot)
+
+    END DO
+
+    z_bot = z_min + n_hy * hy_deltaz
+    z_top = z_max
+    
+    DO j = 1,n_part
+       
+       CALL interp_1d_scalar(z_col, solid_mass_flux(j,:), z_bot, solid_bot)
+       CALL interp_1d_scalar(z_col, solid_mass_flux(j,:), z_top, solid_top)
+
+       CALL interp_1d_scalar(z_col, x_col, z_bot, x_bot)
+       CALL interp_1d_scalar(z_col, x_col, z_top, x_top)
+       
+       CALL interp_1d_scalar(z_col, x_col, z_bot, y_bot)
+       CALL interp_1d_scalar(z_col, x_col, z_top, y_top)
+              
+       CALL interp_1d_scalar(z_col, r_col, z_bot, r_bot)
+       CALL interp_1d_scalar(z_col, r_col, z_top, r_top)
+          
+       delta_solid(j) = solid_bot - solid_top
+       cloud_solid(j) = solid_top
+
+    END DO
+
+    solid_tot(1:n_part) = solid_tot(1:n_part) + delta_solid(1:n_part)
+
+    ! WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',SUM(solid_tot)
+
+    solid_tot(1:n_part) = solid_tot(1:n_part) + cloud_solid(1:n_part)
+
+ 
+    ! WRITE(*,*) 'n_cloud',n_cloud
+
+    IF ( n_cloud .EQ. 1 ) THEN
+   
+       IF ( verbose_level .GE. 1 ) THEN
+          
+          WRITE(*,110) 0.5D0 * ( x_top + x_bot ) , 0.5D0 * ( y_top + y_bot ) ,     &
+               0.5D0 * ( z_top + z_bot ) , delta_solid(1:n_part)
+          
+       END IF
+       
+       WRITE(hy_unit,110) 0.5D0 * ( x_top + x_bot ) , 0.5D0 * ( y_top + y_bot ) ,     &
+            0.5D0 * ( z_top + z_bot ) , delta_solid(1:n_part)
+       
+    ELSE
+       
+       IF ( u_atm .LT. 1.0D-1 ) THEN
+          
+          delta_angle = 2.D0*pi_g/n_cloud
+          
+       ELSE
+          
+          delta_angle = pi_g / ( n_cloud - 1.D0 )
+          
+       END IF
+              
+       DO i=1,n_cloud
+          
+          start_angle =  DATAN2(sin_theta,cos_theta)
+          angle_release = (i-1) * delta_angle - 0.5D0*pi_g
+          
+          dx = 0.5* ( r_bot + r_top ) * DCOS(start_angle + angle_release)
+          dy = 0.5* ( r_bot + r_top ) * DSIN(start_angle + angle_release)
+          
+          IF ( verbose_level .GE. 1 ) THEN
+             
+             WRITE(*,110)  0.5D0 * ( x_top + x_bot ) + dx ,                     &
+                  0.5D0 * ( y_top + y_bot ) + dy , z_top ,                      &
+                  delta_solid(1:n_part)/n_cloud
+             
+          END IF
+          
+          WRITE(hy_unit,110)   0.5D0 * ( x_top + x_bot ) + dx ,                 &
+               0.5D0 * ( y_top + y_bot ) + dy , z_top ,                         &
+               delta_solid(1:n_part)/n_cloud
+          
+       END DO
+       
+    END IF
+
+    IF ( n_cloud .EQ. 1 ) THEN
+
+       IF ( verbose_level .GE. 1 ) THEN
+          
+          WRITE(*,110) x_top , y_top , z_top , cloud_solid(1:n_part)
+          
+       END IF
+       
+       WRITE(hy_unit,110) x_top , y_top , z_top , cloud_solid(1:n_part)
+       
+    ELSE
+       
+       IF ( u_atm .LT. 1.0D-1 ) THEN
+          
+          delta_angle = 2.D0*pi_g/n_cloud
+          
+       ELSE
+          
+          delta_angle = pi_g / ( n_cloud - 1.D0 )
+          
+       END IF
+              
+       DO i=1,n_cloud
+          
+          start_angle =  DATAN2(sin_theta,cos_theta)
+          angle_release = (i-1) * delta_angle - 0.5D0*pi_g
+          
+          dx = 0.5* ( r_bot + r_top ) * DCOS(start_angle + angle_release)
+          dy = 0.5* ( r_bot + r_top ) * DSIN(start_angle + angle_release)
+          
+          
+          IF ( verbose_level .GE. 1 ) THEN
+
+             WRITE(*,110) x_top+dx , y_top+dy , z_top , cloud_solid(1:n_part)/n_cloud
+             
+          END IF
+          
+          WRITE(hy_unit,110) x_top+dx , y_top+dy , z_top , cloud_solid(1:n_part)/n_cloud
+          
+       END DO
+
+    END IF
+
+
+    ! WRITE(*,*) 'z_max',z_max
+    WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',SUM(solid_tot)
+
+
+
+107 FORMAT(1x,'     x (m)     ',1x,'      y (m)    ', 1x,'     z (m)     ')
+    
+108 FORMAT(2x,A)
+    
+110 FORMAT(33(1x,e15.8))
+
+
+  END SUBROUTINE check_hysplit
 
 
 END MODULE inpout

@@ -279,7 +279,7 @@ CONTAINS
 
        mass_flow_rate = 10.0** log10_mfr
   
-       WRITE(*,*) 'WARNING: Fixed mfr =',mass_flow_rate
+       WRITE(*,*) 'WARNING: Fixed MER =',mass_flow_rate
 
        IF ( r0 .EQ. 0.D0 ) THEN
 
@@ -290,20 +290,21 @@ CONTAINS
              mag_u = DSQRT(u*u+w*w)
              phi = ATAN(w/u)
 
-             WRITE(*,*) 'Calculated initial velocity =',w
+             WRITE(*,*) 'WARNING: calculated initial velocity =',w
 
           END IF
                          
           r = DSQRT( mass_flow_rate / ( pi_g * rho_mix * mag_u ) )
           r0=r
 
-          WRITE(*,*) 'Calculated radius =',r
+          WRITE(*,*) 'WARNING: Initial radius [m] computed from MER and w0 =',r
 
        END IF
 
     ELSE
 
        mass_flow_rate = pi_g * rho_mix * mag_u * (r**2)
+       WRITE(*,*) 'Initial MER [kgs-1] computed from r0 and w0 =',mass_flow_rate
        
     END IF
 
@@ -323,7 +324,6 @@ CONTAINS
 
     gas_mass_fraction = gas_volume_fraction * rho_gas / rho_mix
 
-    WRITE(*,*) 'initial mfr',mass_flow_rate
 
     RETURN
   END SUBROUTINE initialize_mixture

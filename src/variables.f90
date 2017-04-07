@@ -32,10 +32,16 @@ MODULE variables
   !> .
   LOGICAL :: nbl_stop
 
+  INTEGER :: n_cloud
+
+  REAL*8 :: height_nbl 
+
   !> Maximum number of particle phases
   INTEGER, PARAMETER :: max_n_part = 50
 
   LOGICAL :: inversion_flag
+
+
 
   REAL*8 :: height_weight 
   REAL*8 :: height_obj 
