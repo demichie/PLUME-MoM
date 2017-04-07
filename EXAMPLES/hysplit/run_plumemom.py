@@ -41,7 +41,7 @@ f = open('plume_model.template','r')
 filedata = f.read()
 f.close()
 
-filedata = filedata.replace("{vent_radius}", str(vent_radius) )
+filedata = filedata.replace("{vent_velocity}", str(vent_velocity) )
 
 filedata = filedata.replace("{gas_mass_fraction}", str(gas_mass_fraction) )
 
@@ -86,16 +86,17 @@ print 'endemittime',endemittime_hhmm,endemittime_round
 runtime=endemittime_round-starttime_round # numero ore arrotondate tra inizio e fine emissione 
 n_runs = np.int(np.floor( runtime.total_seconds() / deltat_plumemom ) ) # numero run di PlumeMoM
 
-if ( len(log10_mfr) == 1 ):
 
-    log10_mfr = np.ones(nruns)*log10_mfr
+if isinstance(log10_mfr, (np.ndarray) ):
 
-elif ( len(log10_mfr) != n_runs ):
+    if ( len(log10_mfr) != n_runs ):
 
-    print 'WARNING: check numbers of values of log10_mfr',len(log10_mfr),n_runs
-    sys.exit()
+        print 'WARNING: check numbers of values of log10_mfr',len(log10_mfr),n_runs
+        sys.exit()
 
-    
+else:
+
+    log10_mfr = np.ones(n_runs)*log10_mfr
     
 
 for i in range(n_runs):

@@ -59,6 +59,7 @@ d2 = datetime.datetime(2000,1,1) + datetime.timedelta(seconds=deltat_plumemom)
 
 duration_hhhh = '{0:04}'.format(int(str(d2.strftime("%H"))))
 
+# diameter in millimiters
 diam = 2.0**(-np.asarray(diam_phi))
 
 # density in g/cc (calc density compute it in kg/m^3)
@@ -447,8 +448,10 @@ file_control.writelines('00 00 00 00 00\n')
 file_control.writelines(str(SI_TYPE)+' '+str(SI_HOUR)+' '+str(SI_MINUTE)+' '+'\n')
 file_control.writelines('%d\n'%npart)
 for i in range(npart):
-    file_control.writelines('%f %f %f \n'%(diam[i],density[i],-shapefactor[i]))#50.0 6.0 1.0
-    file_control.writelines('0 0.0 0.0 0.0 0.0 \n')#0 0.0 0.0 0.0 0.0
+    # the diameter is converted from millimeters to microns (as required by hysplit)
+    file_control.writelines('%f %f %f \n'%(1000.0*diam[i],density[i],-shapefactor[i]))#50.0 6.0 1.0
+    # Deposition velocity (m/s), Pollutant molecular weight (Gram/Mole), Surface Reactivity Ratio, Diffusivity  Ratio, Effective Henry's Constant
+    file_control.writelines('0.0 0.0 0.0 0.0 0.0 \n')#0 0.0 0.0 0.0 0.0
     file_control.writelines('0.0 0.0 0.0 \n')#0.0 1.0E+06 1.0E-06
     file_control.writelines('0\n')#0
     file_control.writelines('0.0\n')#0.0

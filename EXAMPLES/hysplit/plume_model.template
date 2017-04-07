@@ -16,17 +16,17 @@
  CPAIR=  998.000000    ,
  WIND_MULT_COEFF=  1.000000000000000     ,
  READ_ATM_PROFILE="card      ",
- SETTLING_MODEL="pfeiffer  ",
+ SETTLING_MODEL="ganser",
  SHAPE_FACTOR= {shapefactor}    ,
  /
 &INITIAL_VALUES
- R0= {vent_radius}     ,
  LOG10_MFR = {log10_mfr}     ,
+ W0 = {vent_velocity} ,
  TP0=  1300.0000000000000     ,
  INITIAL_NEUTRAL_DENSITY=F,
- GAS_MASS_FRACTION0=  3.0000000000000825E-002,
+ GAS_MASS_FRACTION0=  {gas_mass_fraction},
  VENT_HEIGHT=  {vent_height}     ,
- DS0=  5.0000000000000000     ,
+ DS0=  2.500000000000000     ,
  N_PART= {npart},
  DISTRIBUTION="constant            ",
  DISTRIBUTION_VARIABLE="particles_number    ",
@@ -35,6 +35,7 @@
 &HYSPLIT_PARAMETERS
  HY_DELTAZ = {deltaz_release}   ,
  NBL_STOP = .TRUE.,
+ N_CLOUD = 4 ,
  /
 &MIXTURE_PARAMETERS
  DIAM1= {diam1} ,
