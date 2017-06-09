@@ -1322,7 +1322,7 @@ CONTAINS
     ! the parameters of the particles phases distributions are saved in a file 
     ! readable by Matlab
 
-    IF ( .NOT.dakota_flag ) THEN
+    IF ( .NOT. dakota_flag ) THEN
 
        n_unit = n_unit + 1
        

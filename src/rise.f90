@@ -618,7 +618,8 @@ CONTAINS
 
     END IF
 
-    WRITE(*,*) 'Neutral buoyance level height =',height_nbl
+    WRITE(*,*) 'Neutral buoyance level height above vent [m] =',height_nbl
+    WRITE(*,*) 'Neutral buoyance level height above sea level [m] =',z
 
 
     RETURN
