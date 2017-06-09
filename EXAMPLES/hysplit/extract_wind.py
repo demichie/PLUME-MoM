@@ -3,12 +3,14 @@ import subprocess
 import datetime
 import os,sys,time
 import shutil
+from scipy import interpolate 
 
 def calc_atm(profile,fields_list):
     """create atmosperic profile for plumemom """
     nlev=len(profile[:,0])
 
     print 'nlev',nlev
+
     grav = 9.81
     Rd = 287.04
     Rw = 461.5
@@ -73,11 +75,11 @@ def calc_atm(profile,fields_list):
 
         z[1:] = z[0] + np.cumsum(deltaz)
 
-	# W->E component of horizontal velocity (m/s)
+    # W->E component of horizontal velocity (m/s)
     U_idx = fields_list.index("UWND") + 1
     U = profile[:,U_idx]
-
-	# S->N component of horizontal velocity (m/s)
+   
+    # S->N component of horizontal velocity (m/s)
     V_idx = fields_list.index("VWND") + 1
     V = profile[:,V_idx]
 
@@ -88,14 +90,14 @@ def calc_atm(profile,fields_list):
 def write_atm(time_input):
     """create atmosperic profile for plumemom """
 
-    from input_file import hysplit_dir, meteo_file, lat, lon
+    from input_file import hysplit_dir, meteo_file, vent_lat, vent_lon
 
     run_path = './'
 
     profile = os.path.join(hysplit_dir,'exec','profile')
 
     subprocess.call(profile+" -d"+run_path+" -f"+meteo_file+" -y"
-                    +str(lat)+" -x"+str(lon)+" -o0 -p00", shell=True) # wind profile at vent position at the beginnig of the wind file
+                    +str(vent_lat)+" -x"+str(vent_lon)+" -o0 -p00", shell=True) # wind profile at vent position at the beginnig of the wind file
 
     with open("profile_00.txt","r") as file1:
         line=file1.readlines()
@@ -111,8 +113,39 @@ def write_atm(time_input):
     file1.close()
 
     for i in range(len(line)):
+        if ( '2D Fields' in line[i] ):
+            print 'search for 2D fields: success',i
+            idx_2d_fields_line = i+1
+            fields_list = line[idx_2d_fields_line].split()
+
+    if 'SHGT' in fields_list:
+  
+        zground_idx = fields_list.index("SHGT") + 1
+        print 'zground_idx',zground_idx
+        values_list = line[idx_2d_fields_line+2].split()
+        z_ground = values_list[zground_idx]
+        print 'z_ground',z_ground
+
+    else:
+
+        z_ground = 0.0
+
+    if 'PRSS' in fields_list:
+  
+        prss_idx = fields_list.index("PRSS") + 1
+        print 'prss_idx',prss_idx
+        values_list = line[idx_2d_fields_line+2].split()
+        prss = values_list[prss_idx]
+        print 'prss',prss
+
+    else:
+
+        prss = 0.0
+
+
+    for i in range(len(line)):
         if ( '3D Field' in line[i] ):
-            print 'success',i
+            print 'search for 3D fields: success',i
             idx_fields_line = i+1
             fields_list = line[idx_fields_line].split()
 
@@ -123,7 +156,7 @@ def write_atm(time_input):
     time_difference_in_hours = int(delta.total_seconds() / 3600) # hours of difference between time and the start of the wind file
 
     subprocess.call(profile+ " -d"+run_path+" -f"+meteo_file
-                    + " -y"+str(lat)+" -x"+str(lon)+" -o"
+                    + " -y"+str(vent_lat)+" -x"+str(vent_lon)+" -o"
                     +str(time_difference_in_hours)+" -p01", shell=True)
     
     with open('atm_profile.txt','w') as file: # output file: wind profile at vent position at time
@@ -135,8 +168,8 @@ def write_atm(time_input):
     file.close()
 
              
-    subprocess.call("rm " +run_path+"profile_00.txt", shell=True) 
-    subprocess.call("rm " +run_path+"profile_01.txt", shell=True) 
+    #subprocess.call("rm " +run_path+"profile_00.txt", shell=True) 
+    #subprocess.call("rm " +run_path+"profile_01.txt", shell=True) 
     
 
     # read the file 'atm_profile.txt'
@@ -160,6 +193,11 @@ def write_atm(time_input):
     a = calc_atm(profile,fields_list)
     a = np.asarray(a)
 
+    if ( z_ground == 0.0 and prss > 0):
+
+        f = interpolate.interp1d(a[2,:],1000*a[0,:])
+        z_ground = f(prss)
+        print 'z_ground',z_ground
 
     nrows = a.shape[1]
 
@@ -172,7 +210,11 @@ def write_atm(time_input):
 
     np.savetxt(f,a.transpose(),fmt='%.4e')
 
-    return
+    f=open('meteo_ground_elev.txt','w')
+    f.write(str(z_ground)+'\n')
+    f.close()
+
+    return 
 
 
 

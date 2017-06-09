@@ -1,56 +1,110 @@
-hysplit_dir = "/home/demichie/Codes/hysplit/trunk"
-plumemom_dir = "/home/demichie/Codes/PLUME-MoM-master"
-runname = 'Etna_23Nov2013'
-starttime="13 11 23 09 00"      # Year,month,day,hour,minute
-endemittime = "13 11 23 10 15"  # Year,month,day,hour,minute
-endruntime = "13 11 23 16 00"   # Year,month,day,hour,minute
-deltat_plumemom = 3600          # seconds
+hysplit_dir = "/home/alessandro/Codici/hysplit-805/trunk"
+plumemom_dir = "/home/alessandro/Codici/PLUME-MoM-master"
+runname = 'Etna_Dec15'
+starttime="15 12 03 02 20" # Year,month,day,hour,minute
+endemittime = "15 12 07 00 00"
+endruntime = "15 12 07 00 00"
+deltat_plumemom = 21600  # seconds
 
-lat = 37.73
-lon = 15.00
-model_top = 32000.0             # meters
-meteo_file = 'INGVC_2311.arl'
-spacing_lat = 0.01              # degrees 
-spacing_lon = 0.01              # degrees
-span_lat = 10.0                 # degrees 
-span_lon = 10.0                 # degrees
-vent_height = 3300.0            # meters
-vent_velocity = 100.0           # m/s
-log10_mfr = [6.6, 6.7]          # log10 of kg/s
-gas_mass_fraction = 0.03        # wt. fraction 
-deltaz_release = 200.0          # meters
+lat = 37.73   # center latitude of the grid
+lon = 15.00  # center longitude of the grid
+model_top = 32000.0
+meteo_file = 'INGVC_dec15.arl'
+
+spacing_lat = 0.5 # degrees between nodes of the sampling grid
+spacing_lon = 0.5 # degrees between nodes of the sampling grid
+span_lat = 10.00   # the total span of the grid in x direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
+span_lon = 20.00   # the total span of the grid in y direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
+
+
+vent_lat = 37.73  	# vent latitude
+vent_lon = 15.00       # vent longitude
+vent_height = 3300.00    # vent height above sea level (it can be different from ground level of meteo data at vent lat,lon)
+vent_velocity = 100.0
+log10_mfr = 6.10
+
+
+gas_mass_fraction = 0.03
+deltaz_release = 200.0
+ncloud = 1
 
 # setup.cfg parameters
-kmsl=0                          # starting heights default to AGL=0 or MSL=1
-ninit=1                         # particle initialization(0-none; 1-once; 2-add; 3-replace)
-ndump=1                         # dump particles to/from file 0-none or nhrs-output intervall
-ncycl=1                         # pardump output cycle time
-numpar = 1000                   # number of puffs or particles to released per cycle
-maxpar = 50000                  # maximum number of particles carried in simulation
-initd = 3                       # initial distribution, particle, puff, or combination
-delt = 2                        # hysplit integration step (minutes)
-
-# particles parameters
-npart = 8                       # particle classes
-diam1 = 0.0000078               # diameter in meters for density function (Bonadonna and Phillips)
-rho1 = 2500                     # density in kg/m3
-diam2 = 0.001                   # diameter in meters
-rho2 = 1000                     # density in kg/m3
-cp_part = 1610                  # J / ( kg K )
-shapefactor = 0.8               # for Ganser model
-partial_mass_fractions = [0.02, 0.125, 0.32, 0.28, 0.18, 0.06, 0.01, 0.005]
-diam_phi = [ -5, -4, -3, -2, -1, 0, 1, 2]
-
+kmsl=1  	# starting heights default to AGL=0 or MSL=1
+ninit=1  	# particle initialization(0-none; 1-once; 2-add; 3-replace)
+ndump=6  	# dump particles to/from file 0-none or nhrs-output intervall
+ncycl=6 	# pardump output cycle time
+numpar = 100 	# number of puffs or particles to released per cycle
+maxpar = 30000 # maximum number of particles carried in simulation
+initd = 3 	# initial distribution, particle, puff, or combination
+delt = 30 	# hysplit integration step (minutes)
+pinpf = '' 
 
 # CONTROL parameters
 #SAMPLING INTERVAL
-SI_TYPE = 0                     # Avg:0 Now:1 Max:2
-SI_HOUR = 1                     # hrs
-SI_MINUTE = 0                   # min
+SI_TYPE = 0 # Avg:0 Now:1 Max:2
+SI_HOUR = 6 # hrs
+SI_MINUTE = 0 # min
 #HEIGHT OF EACH CONCENTRATION LEVEL (m-msl)
 H_LEVELS = '0 30000'
 
+
+
+# particles parameters
+npart = 9
+diam1 = 0.000004
+rho1 = 2200
+diam2 = 0.002
+rho2 = 1800
+cp_part = 1610
+shapefactor = 0.6
+
+
+
+
+# Fuego (subplinian)
+#partial_mass_fractions = [	0.07, 	0.12, 	0.27,	0.265, 	0.16, 	0.045,	0.02, 	0.025,	0.0125,	0.0075,	0.005 ]
+#diam_phi = 		 [ 	-2 ,	-1 , 	0 ,	1 , 	2 , 	3 , 	4 , 	5 , 	6 , 	7 , 	8 ]	
+
+# Ruapehu (subplinian)
+#partial_mass_fractions = [	0.05, 	0.09, 	0.14 ,	0.13, 	0.155,	0.15,	0.10, 	0.08,	0.03,	0.02,	0.01,	0.005,	0.0025,	0.0013,	0.0012 	]
+#diam_phi = 		 [ 	-4 ,	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5 , 	6 ,	7 ,	8,	9,	10	]	
+
+# Stromboli (violent strombolian, 2003)
+#partial_mass_fractions = [	0.05, 	0.05, 	0.03,	0.10, 	0.30,	0.255,	0.115, 	0.045,	0.055]
+#diam_phi = 		 [ 	-4 ,	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 ]	
+
+# Cordon Caulle (subplininan, 2011)
+#partial_mass_fractions = [	0.13, 	0.155, 	0.164,	0.146, 	0.093,	0.093,	0.018, 	0.014,	0.031,	0.029,	0.022,	0.015,	0.012,	0.007,	0.005	]
+#diam_phi = 		 [ 	-4 ,	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5 , 	6 ,	7 ,	8,	9,	10	]	
+
+# Eyjafjallajokull (VEI4, 2010)
+#partial_mass_fractions = [	0.055,	0.095, 	0.10,	0.16,	0.13, 	0.11,	0.09,	0.085,	0.065,	0.05,	0.03,	0.01,	0.02	]
+#diam_phi = 		 [ 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5 , 	6 ,	7 ,	8,	9,	10	]	
+
+# Vesuvio (subplinian, 1631)
+#partial_mass_fractions = [	0.04, 	0.07, 	0.06,	0.06, 	0.12,	0.17,	0.10, 	0.06,	0.07,	0.09,	0.09,	0.05,	0.01	]
+#diam_phi = 		 [ 	-4 ,	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5 , 	6 ,	7 ,	8,	]	
+
+# Etna (violent strmobolian, 2002)
+partial_mass_fractions = [	0.020, 	0.090, 	0.140,	0.240, 	0.195,	0.170,	0.085, 	0.035,	0.025	]
+diam_phi = 		 [ 	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5	]	
+
+# Vesuvio (plinian, 79)
+#partial_mass_fractions = [	0.055,	0.075, 	0.12, 	0.125,	0.13, 	0.15,	0.095,	0.08, 	0.045,	0.135	]
+#diam_phi = 		 [ 	-4 ,	-3 , 	-2 ,	-1 , 	0 , 	1 , 	2 , 	3 , 	4 , 	5 	]	
+
+
+
+
 #SAMPLING POINTS
-P01=[37.76, 15.05]
-P02=[37.81, 15.17]
-P03=[37.83, 15.26]
+#P01=[-38.97,-67.82]
+#P02=[-38.70,-68.02]
+#P03=[-38.96,-68.04]
+#P04=[-38.96,-68.06]
+#P05=[-38.94,-68.11]
+#P06=[-38.96,-68.05]
+#P07=[-38.95,-68.23]
+#P08=[-39.02,-67.58]
+#P09=[-39.04,-67.57]
+
+

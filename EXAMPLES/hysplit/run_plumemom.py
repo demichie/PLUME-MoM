@@ -51,6 +51,7 @@ filedata = filedata.replace("{shapefactor}", str(shapefactor) )
 
 filedata = filedata.replace("{deltaz_release}", str(deltaz_release) )
 
+filedata = filedata.replace("{ncloud}", str(ncloud) )
 
 filedata = filedata.replace("{vent_height}", str(vent_height) )
 
@@ -97,7 +98,7 @@ if isinstance(log10_mfr, (np.ndarray) ):
 else:
 
     log10_mfr = np.ones(n_runs)*log10_mfr
-    
+
 
 for i in range(n_runs):
 

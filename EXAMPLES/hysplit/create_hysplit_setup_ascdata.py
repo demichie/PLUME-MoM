@@ -18,8 +18,8 @@ with open('SETUP.CFG','w') as setup:
     setup.write("efile = 'EMITIMES', \n")
     setup.write('numpar='+str(numpar)+'\n')
     setup.write('maxpar='+str(maxpar)+'\n')
-    setup.write("pinpf = 'PARINIT', \n")
-    setup.write("poutf = 'PARDUMP', \n")
+    setup.write("pinpf ='"+pinpf+"'\n")
+    setup.write("poutf ='pdump_"+runname+"'\n")
     setup.write('/ \n')
 setup.close()
 
