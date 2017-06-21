@@ -264,7 +264,7 @@ b = b.reshape((-1,3))
 
 for i in range(max_lines-len(b)):
 
-    b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
+    b = np.vstack(( b , b[len(b)-1,:] + [0.01,0.01,100] ))
 
     data1 = np.vstack((data1,np.zeros(npart)))
 
@@ -387,7 +387,7 @@ for i in range(2,n_runs,1):
 
     for i in range(max_lines-len(b)):
 
-        b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
+        b = np.vstack(( b , b[len(b)-1,:] + [0.01,0.01,100] ))
 	
         data1 = np.vstack((data1,np.zeros(npart)))
     
@@ -495,7 +495,7 @@ if ( n_runs > 1):
 
     for i in range(max_lines-len(b)):
   
-        b = np.vstack(( b , b[len(b)-1,:] + [0.1,0.1,100] ))
+        b = np.vstack(( b , b[len(b)-1,:] + [0.001,0.001,100] ))
         data1 = np.vstack((data1,np.zeros(npart)))
 
     # b1 is an array containing lat,lon and height for time i repeated npart times
