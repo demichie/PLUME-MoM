@@ -24,6 +24,8 @@ DUMP="cdump_$result"
 
 DUMP_ACC="cdumpcum_$result"
 
+DUMP_SUM="cdumpsum_$result"
+
 PDUMP="pdump_$result"
 
 
@@ -43,15 +45,17 @@ echo "-------------- start postprocessing ---------------"
 python create_maptext.py 
 
 echo "'TITLE&','### $0 ### &'" >LABELS.CFG
-${MDL}/exec/parxplot -i$PDUMP -k1 -z80 -j${MDL}/graphics/arlmap
+${MDL}/exec/parxplot -i$PDUMP -k1 -z20 -j${MDL}/graphics/arlmap
 
 ${MDL}/exec/par2asc -i$PDUMP -oPARDUMP.txt 
     
-${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z80 -d1 -ukg -oconcplot.ps
+${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z20 -d1 -ukg -oconcplot.ps
 
 ${MDL}/exec/concacc -i$DUMP -o$DUMP_ACC
 
-${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z80 -d1 -ukg -oconcplot_cum.ps
+${MDL}/exec/concsum -i$DUMP_ACC -o$DUMP_SUM
+
+${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z20 -d1 -ukg -oconcplot_cum.ps
 
 rm -f LABELS.CFG
 
