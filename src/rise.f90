@@ -34,7 +34,7 @@ CONTAINS
     USE particles_module, ONLY : n_part , mom0 , mom
     USE particles_module, ONLY : distribution_variable
     USE particles_module, ONLY : solid_partial_mass_fraction
-    USE plume_module, ONLY: s , w , x , y , z , vent_height , r , mag_u
+    USE plume_module, ONLY: s , w , x , y , z , vent_height , r , mag_u , phi
     USE solver_module, ONLY: ds, ds0, f, ftemp, rhs, rhstemp
     USE solver_module, ONLY: f_stepold
     USE variables, ONLY : verbose_level , inversion_flag
@@ -621,7 +621,10 @@ CONTAINS
     WRITE(*,*) 'Plume height above the vent [m] =', plume_height
     WRITE(*,*) 'Neutral buoyance level height above the vent [m] =',height_nbl
     WRITE(*,*) 'Neutral buoyance level height above sea level [m] =',z
-
+    WRITE(*,*) 'Maximum height above the vent (including radius) [m] =',        &
+         plume_height + r * cos(phi)
+    WRITE(*,*) 'Plume bending angle from horizontal (deg) =', phi / ( 4.D0 *    &
+         ATAN(1.D0) ) * 180.D0
 
     RETURN
 
