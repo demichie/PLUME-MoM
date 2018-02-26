@@ -19,6 +19,7 @@ PLUMEMoM_SOURCES = \
                 solver_rise.f90 \
                 inpout.f90 \
 		rise.f90 \
+                inversion.f90 \
                 plume_model.f90
 
 FCFLAGS         = -g -O3 -ffast-math

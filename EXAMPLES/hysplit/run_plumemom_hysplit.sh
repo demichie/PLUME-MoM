@@ -20,42 +20,70 @@ result="${temp#\"}"
 temp="${result%\'}"
 result="${temp#\'}"
 
-DUMP="cdump_$result"
+DUMP_PART="cdump_part_$result"
 
-DUMP_ACC="cdumpcum_$result"
+DUMP_ACC_PART="cdumpcum_part_$result"
 
-DUMP_SUM="cdumpsum_$result"
+DUMP_SUM_PART="cdumpsum_part_$result"
 
-PDUMP="pdump_$result"
+PDUMP_PART="pdump_part_$result"
 
+DUMP_GAS="cdump_gas_$result"
+
+DUMP_ACC_GAS="cdumpcum_gas_$result"
+
+DUMP_SUM_GAS="cdumpsum_gas_$result"
+
+PDUMP_GAS="pdump_gas_$result"
 
 #----------------------------------------------------------
 
 python run_plumemom.py 
 
-python create_hysplit_emitimes_control.py
+python create_hysplit_emittimes_control.py
 
 python create_hysplit_setup_ascdata.py
  
+echo "-------------- particles dispersion simulation ---------------"
 
-${MDL}/exec/hycs_std  
+${MDL}/exec/hycs_std part  
+
+echo "-------------- gas dispersion simulation ---------------"
+
+${MDL}/exec/hycs_std gas  
 
 echo "-------------- start postprocessing ---------------"
 
-python create_maptext.py 
+#python create_maptext.py !check!
 
-echo "'TITLE&','### $0 ### &'" >LABELS.CFG
-${MDL}/exec/parxplot -i$PDUMP -k1 -z20 -j${MDL}/graphics/arlmap
+echo "'PARTICLES &','### $0 ### &'" >LABELS.CFG
 
-${MDL}/exec/par2asc -i$PDUMP -oPARDUMP.txt 
+${MDL}/exec/parxplot -i$PDUMP_PART -k1 -z20 -j${MDL}/graphics/arlmap
+
+${MDL}/exec/par2asc -i$PDUMP_PART -oPARDUMP_PART.txt 
     
-${MDL}/exec/concplot -i$DUMP -j${MDL}/graphics/arlmap -s0 -z20 -d1 -ukg -oconcplot.ps
+${MDL}/exec/concplot -i$DUMP_PART -j${MDL}/graphics/arlmap -s0 -z20 -d1 -ukg -oconcplot_part.ps
 
-${MDL}/exec/concacc -i$DUMP -o$DUMP_ACC
+${MDL}/exec/concacc -i$DUMP_PART -o$DUMP_ACC_PART
 
-${MDL}/exec/concsum -i$DUMP_ACC -o$DUMP_SUM
+${MDL}/exec/concsum -i$DUMP_ACC_PART -o$DUMP_SUM_PART
 
-${MDL}/exec/concplot -i$DUMP_ACC -j${MDL}/graphics/arlmap -s0 -t0 -z20 -d1 -ukg -oconcplot_cum.ps
+${MDL}/exec/concplot -i$DUMP_ACC_PART -j${MDL}/graphics/arlmap -s0 -t0 -z20 -d1 -ukg -oconcplot_cum_part.ps
+
+echo "'GAS &','### $0 ### &'" >LABELS.CFG
+
+${MDL}/exec/parxplot -i$PDUMP_GAS -k1 -z20 -j${MDL}/graphics/arlmap
+
+${MDL}/exec/par2asc -i$PDUMP_GAS -oPARDUMP_GAS.txt 
+    
+${MDL}/exec/concplot -i$DUMP_GAS -j${MDL}/graphics/arlmap -s0 -z20 -d1 -ukg -oconcplot_gas.ps
+
+${MDL}/exec/concacc -i$DUMP_GAS -o$DUMP_ACC_GAS
+
+${MDL}/exec/concsum -i$DUMP_ACC_GAS -o$DUMP_SUM_GAS
+
+${MDL}/exec/concplot -i$DUMP_ACC_GAS -j${MDL}/graphics/arlmap -s0 -t0 -z20 -d1 -ukg -oconcplot_cum_gas.ps
+
 
 rm -f LABELS.CFG
 

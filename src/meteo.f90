@@ -50,6 +50,9 @@ MODULE meteo_module
   !> Atmospheric density
   REAL*8 :: rho_atm  
 
+  !> Atmospheric specific humidity 
+  REAL*8 :: sphu_atm
+
   !> Atmospheric kinematic viscosity
   REAL*8 :: visc_atm 
 
@@ -72,10 +75,34 @@ MODULE meteo_module
   REAL*8 :: duatm_dz 
 
   !> perfect gas constant for dry air ( J/(kg K) )
-  REAL :: rair
+  REAL*8 :: rair
 
   !> specific heat capacity for dry air
-  REAL :: cpair
+  REAL*8 :: cpair
+  
+  !> reference temperature (K)
+  REAL*8, PARAMETER :: T_ref = 273.15D0
+  
+  !> enthalpy of water vapor at reference temperature (J kg-1)
+  REAL*8, PARAMETER :: h_wv0 = 2.501D6
+  
+  !> specifc heat of water vapor (J K-1 kg-1)
+  REAL*8, PARAMETER :: c_wv = 1996.D0
+  
+  !> enthalpy of liquid water at reference temperature (J kg-1)
+  REAL*8, PARAMETER :: h_lw0 = 3.337D5
+  
+  !> specific heat of liquid water (J K-1 kg-1)
+  REAL*8, PARAMETER :: c_lw = 4187.0D0
+  
+  !> molecular weight of dry air
+  REAL*8, PARAMETER :: da_mol_wt = 0.029D0
+  
+  !> molecular weight of water vapor
+  REAL*8, PARAMETER :: wv_mol_wt = 0.018D0
+   
+  !> gas constant for water vapor ( J/(kg K) )
+  REAL*8, PARAMETER :: rwv = 462
 
   INTEGER :: n_atm_profile
 
@@ -85,7 +112,7 @@ MODULE meteo_module
   !> - 2) density (kg/m^3)
   !> - 3) pressure (hPa)
   !> - 4) temperature (K) 
-  !> - 5) specific-humidity (g/kg)
+  !> - 5) specific-humidity (kg/kg)
   !> - 6) wind velocity West->East (m/s)
   !> - 7) wind velocity North-South (m/s)
   !> .
@@ -170,6 +197,9 @@ CONTAINS
 
        ! interp temperature profile
        CALL interp_1d_scalar(atm_profile(1,:), atm_profile(4,:), z, ta)
+
+       ! interp specific humifity profile
+       CALL interp_1d_scalar(atm_profile(1,:), atm_profile(5,:), z, sphu_atm)
 
        ! interp pressure profile
        CALL interp_1d_scalar(atm_profile(1,:), atm_profile(6,:), z, WE_wind)
@@ -301,7 +331,7 @@ CONTAINS
     Cs = 120.D0
     visc_atm = visc_atm0 * ( 288.15D0 + Cs ) / ( ta + Cs ) * ( ta / 288.15D0 )**1.5D0
 
-    IF ( verbose_level .GE. 1 ) THEN
+    IF ( verbose_level .GE. 2 ) THEN
 
        WRITE(*,*) z,rho_atm,pa,ta,u_atm,cos_theta,sin_theta
        WRITE(*,*) 'visc_atm',visc_atm

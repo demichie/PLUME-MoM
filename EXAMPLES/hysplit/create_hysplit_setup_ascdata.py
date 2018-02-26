@@ -7,7 +7,7 @@ import shutil
 from part_density import calc_density
 from input_file import *
 
-with open('SETUP.CFG','w') as setup:
+with open('SETUP.part','w') as setup:
     setup.write('&SETUP  \n')
     setup.write('initd='+str(initd)+'\n')
     setup.write('kmsl='+str(kmsl)+'\n')
@@ -15,13 +15,31 @@ with open('SETUP.CFG','w') as setup:
     setup.write('ndump='+str(ndump)+'\n')
     setup.write('ncycl='+str(ncycl)+'\n')
     setup.write('delt='+str(delt)+'\n')
-    setup.write("efile = 'EMITIMES', \n")
+    setup.write("efile = 'EMITTIMES.part', \n")
     setup.write('numpar='+str(numpar)+'\n')
     setup.write('maxpar='+str(maxpar)+'\n')
     setup.write("pinpf ='"+pinpf+"'\n")
-    setup.write("poutf ='pdump_"+runname+"'\n")
+    setup.write("poutf ='pdump_part_"+runname+"'\n")
     setup.write('/ \n')
 setup.close()
+
+
+with open('SETUP.gas','w') as setup:
+    setup.write('&SETUP  \n')
+    setup.write('initd='+str(initd)+'\n')
+    setup.write('kmsl='+str(kmsl)+'\n')
+    setup.write('ninit='+str(ninit)+'\n')
+    setup.write('ndump='+str(ndump)+'\n')
+    setup.write('ncycl='+str(ncycl)+'\n')
+    setup.write('delt='+str(delt)+'\n')
+    setup.write("efile = 'EMITTIMES.gas', \n")
+    setup.write('numpar='+str(numpar)+'\n')
+    setup.write('maxpar='+str(maxpar)+'\n')
+    setup.write("pinpf ='"+pinpf+"'\n")
+    setup.write("poutf ='pdump_gas_"+runname+"'\n")
+    setup.write('/ \n')
+setup.close()
+
 
 with open('ASCDATA.CFG','w') as ascdata:
     ascdata.write('-90.0  -180.0 \n')	

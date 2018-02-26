@@ -1,48 +1,57 @@
-hysplit_dir = "/home/alessandro/Codici/hysplit-805/trunk"
-plumemom_dir = "/home/alessandro/Codici/PLUME-MoM-master"
-runname = 'Etna_Dec15'
-starttime="15 12 03 02 20" # Year,month,day,hour,minute
-endemittime = "15 12 07 00 00"
-endruntime = "15 12 07 00 00"
-deltat_plumemom = 21600  # seconds
+hysplit_dir = "/home/demichie/Codes/hysplit/trunk"
+plumemom_dir = "/home/demichie/Codes/PLUME-MoM-multigas"
+runname = 'etna_test'
+starttime="15 12 03 10 00" # Year,month,day,hour,minute
+endemittime = "15 12 03 14 00"
+endruntime = "15 12 03 17 00"
+deltat_plumemom = 3600  # seconds
 
 lat = 37.73   # center latitude of the grid
 lon = 15.00  # center longitude of the grid
 model_top = 32000.0
-meteo_file = 'INGVC_dec15.arl'
+meteo_file = 'extract_22666.bin'
 
-spacing_lat = 0.5 # degrees between nodes of the sampling grid
-spacing_lon = 0.5 # degrees between nodes of the sampling grid
-span_lat = 10.00   # the total span of the grid in x direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
-span_lon = 20.00   # the total span of the grid in y direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
+spacing_lat = 0.01 # degrees between nodes of the sampling grid
+spacing_lon = 0.01 # degrees between nodes of the sampling grid
+span_lat = 5.00   # the total span of the grid in x direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
+span_lon = 5.00   # the total span of the grid in y direction. For instance, a span of 10 degrees would cover 5 degrees on each side of the center grid location
 
 
 vent_lat = 37.73  	# vent latitude
 vent_lon = 15.00       # vent longitude
 vent_height = 3300.00    # vent height above sea level (it can be different from ground level of meteo data at vent lat,lon)
 vent_velocity = 100.0
-log10_mfr = 6.10
+log10_mfr = 5.10
 
+# volcanic gas parameters
+ngas = 2   # in addition to H2O
+rvolcgas = [189, 130 ] # CO2 and SO2 R constant [J/kgK]
+cpvolcgas = [844, 640]
+volcgas_mol_wt = [0.044, 0.064]
+volcgas_mass_fraction = [0.01, 0.01]
 
-gas_mass_fraction = 0.03
+#initial water mass fraction
+water_mass_fraction0 = 0.03
+
+# hysplit parameters
 deltaz_release = 200.0
 ncloud = 1
 
 # setup.cfg parameters
 kmsl=1  	# starting heights default to AGL=0 or MSL=1
 ninit=1  	# particle initialization(0-none; 1-once; 2-add; 3-replace)
-ndump=6  	# dump particles to/from file 0-none or nhrs-output intervall
-ncycl=6 	# pardump output cycle time
-numpar = 100 	# number of puffs or particles to released per cycle
+ndump=1  	# dump particles to/from file 0-none or nhrs-output intervall
+ncycl=1 	# pardump output cycle time
+numpar = 1000 	# number of puffs or particles to released per cycle
 maxpar = 30000 # maximum number of particles carried in simulation
 initd = 3 	# initial distribution, particle, puff, or combination
-delt = 30 	# hysplit integration step (minutes)
+delt = 10 	# hysplit integration step (minutes)
 pinpf = '' 
 
 # CONTROL parameters
 #SAMPLING INTERVAL
-SI_TYPE = 0 # Avg:0 Now:1 Max:2
-SI_HOUR = 6 # hrs
+SI_TYPE = 1 # Avg:0 Now:1 Max:2
+SI_HOUR = 1 # hrs
 SI_MINUTE = 0 # min
 #HEIGHT OF EACH CONCENTRATION LEVEL (m-msl)
 H_LEVELS = '0 30000'

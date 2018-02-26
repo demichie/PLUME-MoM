@@ -43,8 +43,6 @@ f.close()
 
 filedata = filedata.replace("{vent_velocity}", str(vent_velocity) )
 
-filedata = filedata.replace("{gas_mass_fraction}", str(gas_mass_fraction) )
-
 filedata = filedata.replace("{npart}", str(npart) )
 
 filedata = filedata.replace("{shapefactor}", str(shapefactor) )
@@ -65,6 +63,26 @@ filedata = filedata.replace("{cp_part}", ",".join(np.char.mod('%4f', cp_part)) )
 
 filedata = filedata.replace("{solid_partial_mass_fraction}", ",".join(np.char.mod('%f', partial_mass_fractions)) )
 filedata = filedata.replace("{diam_constant_phi}", ",".join(np.char.mod('%f', diam_phi)) )
+
+
+filedata = filedata.replace("{ngas}", str(ngas) )
+
+if ngas>0:
+
+    filedata = filedata.replace("{rvolcgas}", ",".join(np.char.mod('%f', rvolcgas)) )
+    filedata = filedata.replace("{cpvolcgas}", ",".join(np.char.mod('%f', cpvolcgas)) )
+    filedata = filedata.replace("{volcgas_mol_wt}", ",".join(np.char.mod('%f', volcgas_mol_wt)) )
+    filedata = filedata.replace("{volcgas_mass_fraction}", ",".join(np.char.mod('%f', volcgas_mass_fraction)) )
+
+else:
+
+    filedata = filedata.replace("{rvolcgas}", "" )
+    filedata = filedata.replace("{cpvolcgas}", "" )
+    filedata = filedata.replace("{volcgas_mol_wt}", "" )
+    filedata = filedata.replace("{volcgas_mass_fraction}", "" )
+
+
+filedata = filedata.replace("{water_mass_fraction0}", str(water_mass_fraction0) )
 
 f = open('plume_model.temp1','w')
 f.write(filedata)
@@ -137,7 +155,6 @@ for i in range(n_runs):
             with open(fname) as infile:
                 for line in infile:
                     outfile.write(line)
-
 
     subprocess.call(plumemom_dir+"/bin/PLUMEMoM", shell=True) 
 

@@ -10,6 +10,10 @@
 MODULE rise
 
   IMPLICIT NONE
+
+  REAL*8 :: plume_height
+  REAL*8 :: column_regime
+
   SAVE
 
 CONTAINS
@@ -30,18 +34,18 @@ CONTAINS
     ! external variables
     USE meteo_module, ONLY : rho_atm , rair
     USE mixture_module, ONLY : gas_mass_fraction , rho_mix, mass_flow_rate ,    &
-         rgasmix , rwvapour
+         rgasmix , rvolcgas_mix ,water_vapor_mass_fraction , volcgas_mix_mass_fraction , &
+         water_mass_fraction,liquid_water_mass_fraction, dry_air_mass_fraction
     USE particles_module, ONLY : n_part , mom0 , mom
     USE particles_module, ONLY : distribution_variable
     USE particles_module, ONLY : solid_partial_mass_fraction
-    USE plume_module, ONLY: s , w , x , y , z , vent_height , r , mag_u , phi
+    USE plume_module, ONLY: s , w , x , y , z , vent_height , r , mag_u
     USE solver_module, ONLY: ds, ds0, f, ftemp, rhs, rhstemp
     USE solver_module, ONLY: f_stepold
     USE variables, ONLY : verbose_level , inversion_flag
     USE variables, ONLY : dakota_flag , hysplit_flag , nbl_stop
+    USE variables, ONLY : write_flag
     USE variables, ONLY : pi_g , height_nbl
-    USE variables, ONLY : height_weight , height_obj , mu_weight ,    &
-       mu_obj , sigma_weight , sigma_obj , skew_weight , skew_obj
 
     ! external procedures
     USE inpout, ONLY: write_column , write_dakota
@@ -91,13 +95,12 @@ CONTAINS
 
     REAL*8 :: k_max
     
-    REAL*8 :: column_regime
-
     INTEGER :: idx , max_idx
 
+    REAL*8 :: rho_mix_init , rho_mix_final
+    
     REAL*8 :: delta_rho
 
-    REAL*8 :: plume_height
     REAL*8 :: x_nbl , y_nbl       
     REAL*8 :: deltarho_min
     REAL*8 :: rho_nbl
@@ -139,6 +142,8 @@ CONTAINS
 
     delta_rho = rho_mix - rho_atm
 
+    rho_mix_init = rho_mix
+    
     DO i_part=1,n_part
 
        WRITE(x1,'(I2.2)') i_part ! converting integer to string using a 'internal file'
@@ -212,32 +217,37 @@ CONTAINS
 
        END IF
 
-       description = 'Init Avg Diam '//trim(x1)
-
-       CALL write_dakota(description,mu_phi)
-
-       description = 'Init Var Diam '//trim(x1)
-
-       CALL write_dakota(description,sigma_phi)
-
-       description = 'Init Skw Diam '//trim(x1)
-
-       CALL write_dakota(description,skew_phi)
-
        mass_fract = solid_partial_mass_fraction(i_part) * ( 1.D0 -              &
             gas_mass_fraction)
-
-       description = 'Init Mass Fract '//trim(x1)
-
-       CALL write_dakota(description,mass_fract)
 
        solid_mass_flux0 = solid_partial_mass_fraction(i_part) * ( 1.D0 -        &
             gas_mass_fraction) * rho_mix * pi_g * r**2 * mag_u
 
-       description = 'Init Solid Flux '//trim(x1)
+       
+       IF ( write_flag ) THEN
+       
+          description = 'Init Avg Diam '//trim(x1)
+          
+          CALL write_dakota(description,mu_phi)
+          
+          description = 'Init Var Diam '//trim(x1)
+          
+          CALL write_dakota(description,sigma_phi)
+          
+          description = 'Init Skw Diam '//trim(x1)
+          
+          CALL write_dakota(description,skew_phi)
+                    
+          description = 'Init Mass Fract '//trim(x1)
+          
+          CALL write_dakota(description,mass_fract)
+          
+          description = 'Init Solid Flux '//trim(x1)
+          
+          CALL write_dakota(description,solid_mass_flux0)
 
-       CALL write_dakota(description,solid_mass_flux0)
-
+       END IF
+          
     END DO
 
     !
@@ -252,7 +262,7 @@ CONTAINS
     !
     ds = ds0
 
-    IF ( .NOT.dakota_flag ) CALL write_column
+    IF ( write_flag ) CALL write_column
 
     ! IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
 
@@ -296,7 +306,7 @@ CONTAINS
 
        ! ----- Check on the solution to reduce step-size condition -------------
 
-       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rwvapour) ) ) THEN
+       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rvolcgas_mix) ) ) THEN
 
           ds = 0.5D0 * ds
           f = f_stepold
@@ -311,7 +321,7 @@ CONTAINS
 
                 WRITE(*,*) 'WARNING: rgasmix =',rgasmix
 
-                WRITE(*,*) 'rair =',rair,' rwvapour =',rwvapour
+                WRITE(*,*) 'rair =',rair,' rvolcgas_mix =',rvolcgas_mix
 
              END IF
 
@@ -345,7 +355,7 @@ CONTAINS
  
        ! ----- Reduce step-size condition and repeat iteration ------------------
  
-       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rwvapour) ) ) THEN
+       IF ( ( w .LE. 0.D0) .OR. ( rgasmix .LT.  MIN(rair , rvolcgas_mix) ) ) THEN
 
           ds = 0.5D0 * ds
           f = f_stepold
@@ -428,10 +438,21 @@ CONTAINS
           
        END IF
        
-       IF ( .NOT.dakota_flag ) CALL write_column
+       IF ( write_flag ) CALL write_column
        
        ! IF ( hysplit_flag ) CALL write_hysplit(x,y,z,.FALSE.)
        
+       IF ( ( w .GE. 1.D-1) .AND. ( MAXVAL(( f - f_stepold ) / MAX(f,f_stepold) * ds) .LT. 1.D-4 ) ) THEN
+
+          ds = MIN(1.1D0*ds,5.D0)
+          IF ( verbose_level .GT. 0 ) THEN
+
+             WRITE(*,*) 'increasing step-size z,ds= ',z,ds
+             READ(*,*)
+
+          END IF
+                    
+       END IF
 
        ! ----- Exit condition ---------------------------------------------------
        
@@ -474,15 +495,19 @@ CONTAINS
     k_max = MAXVAL( k(1:max_idx-2) )
 
     check_sb = ( w_maxrel - w_minrel ) / w_maxabs
+    
+    eps_sb = 0.05D0
 
-    eps_sb = 0.05
 
     IF ( delta_rho .GT. 0.d0 ) THEN
-       
-       WRITE(*,*) 'Plume Regime: Collapsing'
-       
+              
        column_regime = 3
 
+       rho_mix_final = rho_mix
+
+       IF ( write_flag ) WRITE(*,*) 'Plume Regime: Collapsing'
+
+       
        IF ( hysplit_flag ) THEN
 
           WRITE(*,*) 'WARNING: problem in hysplit file'
@@ -510,13 +535,13 @@ CONTAINS
           
           !WRITE(*,*) 'w_minrel,w_maxrel,w_maxabs',w_minrel,w_maxrel,w_maxabs
           
-          WRITE(*,*) 'Plume Regime: Superbuoyant'
+          IF ( write_flag) WRITE(*,*) 'Plume Regime: Superbuoyant'
           
           column_regime = 2
           
        ELSE
           
-          WRITE(*,*) 'Plume Regime: Buoyant'
+          IF ( write_flag) WRITE(*,*) 'Plume Regime: Buoyant'
           
           column_regime = 1
           
@@ -524,19 +549,24 @@ CONTAINS
           
     END IF
 
-    description = 'Column regime'
-    
-    CALL WRITE_DAKOTA(description,column_regime)
-
-    description = 'NBL height (atv)'
-
-    CALL WRITE_DAKOTA(description,height_nbl)
-    
-    description = 'Plume height (atv)'
     plume_height = z - vent_height
 
-    CALL WRITE_DAKOTA(description,plume_height)
+    IF ( write_flag ) THEN
 
+       description = 'Column regime'
+       
+       CALL WRITE_DAKOTA(description,column_regime)
+       
+       description = 'NBL height (atv)'
+       
+       CALL WRITE_DAKOTA(description,height_nbl)
+       
+       description = 'Plume height (atv)'
+       
+       CALL WRITE_DAKOTA(description,plume_height)
+
+    END IF
+       
     DO i_part=1,n_part
 
        WRITE(x1,'(I2.2)') i_part ! convert int to string using an 'internal file'
@@ -563,69 +593,82 @@ CONTAINS
 
        END IF
 
-       description = 'Final Avg Diam '//trim(x1)
-
-       CALL write_dakota(description,mu_phi)
-
-       description = 'Final Var Diam '//trim(x1)
-
-       CALL write_dakota(description,sigma_phi)
-
-       description = 'Final Skw Diam '//trim(x1)
-
-       CALL write_dakota(description,skew_phi)
-
        mass_fract = solid_partial_mass_fraction(i_part) * ( 1.D0 -              &
             gas_mass_fraction)
-
-       description = 'Final Mass Fract '//trim(x1)
-
-       CALL write_dakota(description,mass_fract)
 
        solid_mass_flux = solid_partial_mass_fraction(i_part) * ( 1.D0 -         &
             gas_mass_fraction) * rho_mix * pi_g * r**2 * mag_u
 
-       description = 'Final Mass Flux '//trim(x1)
-
-       CALL write_dakota(description,solid_mass_flux)
-
        solid_mass_flux_change = 1.D0 - solid_mass_flux / solid_mass_flux0
 
-       description = 'Solid Flux Lost '//trim(x1)
+       
+       IF ( write_flag ) THEN
+       
+          description = 'Final Avg Diam '//trim(x1)
+          
+          CALL write_dakota(description,mu_phi)
+          
+          description = 'Final Var Diam '//trim(x1)
+          
+          CALL write_dakota(description,sigma_phi)
+          
+          description = 'Final Skw Diam '//trim(x1)
+          
+          CALL write_dakota(description,skew_phi)
 
-       CALL write_dakota(description,solid_mass_flux_change)
+          description = 'Final Mass Fract '//trim(x1)
+          
+          CALL write_dakota(description,mass_fract)
+          
+          description = 'Final Mass Flux '//trim(x1)
+          
+          CALL write_dakota(description,solid_mass_flux)
 
+          description = 'Solid Flux Lost '//trim(x1)
+          
+          CALL write_dakota(description,solid_mass_flux_change)
+          
+          description = 'VG Mass Fraction '
+          
+          CALL write_dakota(description,volcgas_mix_mass_fraction)
+          
+          description = 'WV Mass Fraction '
+          
+          CALL write_dakota(description,water_vapor_mass_fraction)
+          
+          description = 'LW Mass Fraction '
+          
+          CALL write_dakota(description,liquid_water_mass_fraction)
+          
+          description = 'DA Mass Fraction '
+          
+          CALL write_dakota(description,dry_air_mass_fraction)
+
+       END IF
             
     END DO
 
-    IF ( inversion_flag ) THEN
-       
-       description = 'Objective_function'
-    
-       obj_function = mu_weight * ( ( mu_phi-mu_obj ) /                         &
-            MAX( ABS(mu_phi),ABS(mu_obj) ) )**2                                 &
-            + sigma_weight * ( ( sigma_phi-sigma_obj ) /                        &
-            MAX( ABS(sigma_phi),ABS(sigma_obj) ) )**2                           &
-            + skew_weight * ( ( skew_phi-skew_obj ) /                           &
-            MAX( ABS(skew_phi),ABS(skew_obj) ) )**2                             &
-            + height_weight * ( ( plume_height-height_obj ) /                   &
-            MAX( ABS(plume_height),ABS(height_obj) ) )**2      
-       
-       CALL WRITE_DAKOTA(description,obj_function)
-       
 
-       WRITE(*,*) 'Plume_height,obj_function' , plume_height , obj_function
+    IF ( write_flag) THEN
+
+       WRITE(*,*) 'Plume height above the vent [m] =', plume_height
+       WRITE(*,*) 'Neutral buoyance level height above the vent [m] =',height_nbl
+       WRITE(*,*) 'Plume height above sea level [m] =',z
+       WRITE(*,*) 'Neutral buoyance level height above sea vent [m] =',            &
+            height_nbl + ( z - plume_height )
+       WRITE(*,*) 
+       WRITE(*,*) 'Dry air mass fraction  =',dry_air_mass_fraction
+       WRITE(*,*) 'Water vapor mass fraction =',water_vapor_mass_fraction
+       WRITE(*,*) 'Other volcanic gas mass_fraction =',volcgas_mix_mass_fraction
+       WRITE(*,*)
+       WRITE(*,*) 'Gas mass fraction (volcgas, water vapor, dry air) =',gas_mass_fraction
+       WRITE(*,*) 'Solid_mass_fraction  =',mass_fract 
+       WRITE(*,*) 'Liquid water mass fraction =',liquid_water_mass_fraction
+       WRITE(*,*)
+       WRITE(*,*) 'Water mass fraction (water vapor + liquid water) =',water_mass_fraction
+       WRITE(*,*)
 
     END IF
-
-    WRITE(*,*) 'Plume height above the vent [m] =', plume_height
-    WRITE(*,*) 'Neutral buoyance level height above the vent [m] =',height_nbl
-    WRITE(*,*) 'Neutral buoyance level height above sea level [m] =',z
-    WRITE(*,*) 'Maximum height above the vent (including radius) [m] =',        &
-         plume_height + r * cos(phi)
-    WRITE(*,*) 'Plume bending angle from horizontal (deg) =', phi / ( 4.D0 *    &
-         ATAN(1.D0) ) * 180.D0
-
     RETURN
 
   END SUBROUTINE plumerise

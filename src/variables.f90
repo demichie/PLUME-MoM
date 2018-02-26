@@ -8,12 +8,12 @@
 !*****************************************************************************   
 
 MODULE variables
-
+  
   IMPLICIT NONE
-
+  
   !> Gravity acceleration 
   REAL*8 :: gi          
-
+  
   !> Greek pi  
   REAL*8 :: pi_g        
 
@@ -41,15 +41,13 @@ MODULE variables
 
   LOGICAL :: inversion_flag
 
+  LOGICAL :: write_flag
 
-
-  REAL*8 :: height_weight 
   REAL*8 :: height_obj 
-  REAL*8 :: mu_weight
-  REAL*8 :: mu_obj
-  REAL*8 :: sigma_weight 
-  REAL*8 :: sigma_obj 
-  REAL*8 :: skew_weight 
-  REAL*8 :: skew_obj
-
+  REAL*8 :: r_min
+  REAL*8 :: r_max
+  REAL*8 :: w_min
+  REAL*8 :: w_max
+  INTEGER :: n_values
+  
 END MODULE variables
