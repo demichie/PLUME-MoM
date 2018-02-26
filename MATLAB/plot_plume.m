@@ -16,21 +16,21 @@ filename = strrep(filename,'.bak','');
 
 run(strcat(filename,'.m'));
 
-if ( strcmp(DISTRIBUTION,'lognormal'))
-    
-    [ ~,mom ] = lognormal_moments( mu,sigma,gas_volume_fraction,...
-        solid_mass_fractions,d1,d2,rho1,rho2);
-    
-    % return
-    
-    
-    if savefig
-        
-        export_fig(strcat(filename,'_sizes.pdf'));
-        
-    end
-    
-end
+% if ( strcmp(DISTRIBUTION,'lognormal'))
+%     
+%     [ ~,mom ] = lognormal_moments( mu,sigma,gas_volume_fraction,...
+%         solid_mass_fractions,d1,d2,rho1,rho2);
+%     
+%     % return
+%     
+%     
+%     if savefig
+%         
+%         export_fig(strcat(filename,'_sizes.pdf'));
+%         
+%     end
+%     
+% end
 
 importfile(strcat(filename,'.col'))
 prova = data;
@@ -71,19 +71,29 @@ rho_mix = prova(:,5);
 temp = prova(:,6);
 w = prova(:,7);
 mag_u = prova(:,8);
-atm_mass_fraction = prova(:,9);
+dry_air_mass_fraction = prova(:,9);
 wvapour_mass_fraction = prova(:,10);
+liquid_water_mass_fraction = prova(:,11);
 
-gas_mass_fraction = atm_mass_fraction + wvapour_mass_fraction;
+
+gas_mass_fraction = dry_air_mass_fraction + wvapour_mass_fraction ...
+    +liquid_water_mass_fraction;
 for i=1:n_part,
 
-    solid_partial_mass_fraction(:,i) = prova(:,10+i);
+    solid_partial_mass_fraction(:,i) = prova(:,11+i);
+
+end
+
+for i=1:n_part,
+
+    volcgas_mass_fraction(:,i) = prova(:,11+n_part+i);
 
 end
 
 
-rho_atm = prova(:,10+n_part+1);
-mfr = prova(:,10+n_part+2);
+volcgas_mix_mass_fraction = prova(:,11+n_part+n_gas+1);
+rho_atm = prova(:,11+n_part+n_gas+2);
+mfr = prova(:,10+n_part+n_gas+2);
 % ta =  prova(:,9+n_part+3);
 
 n_z = length(z);
@@ -97,10 +107,13 @@ rho_rel = rho_mix - rho_atm;
 figure
 subplot(1,3,1)
 
-plot(atm_mass_fraction,z, wvapour_mass_fraction,z,gas_mass_fraction,z);
+plot(dry_air_mass_fraction,z, wvapour_mass_fraction,z,...
+    liquid_water_mass_fraction,z,...
+    volcgas_mix_mass_fraction,z,gas_mass_fraction,z);
 
 xlabel('Gas mass fraction');
 ylabel('Height (km)');
+legend('dry air','water vapour','liquid water','volcgas','total gas');
 box on;
 
 %%
@@ -277,7 +290,7 @@ figure
 subplot(2,2,1)
 
 % plot(x,z,x+r,z,x-r,z);
-plot(x+r,z);
+plot(r,z);
 xlabel('Radius (km)');
 ylabel('Height (km)');
 
