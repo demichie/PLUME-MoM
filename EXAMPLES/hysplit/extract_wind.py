@@ -5,62 +5,31 @@ import os,sys,time
 import shutil
 from scipy import interpolate 
 
-def calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list):
+def calc_atm(profile,fields_list):
     """create atmosperic profile for plumemom """
     nlev=len(profile[:,0])
 
     print 'nlev',nlev
 
     grav = 9.81
-
-    # gas constant for dry air (J kg-1 K-1)
     Rd = 287.04
-
-    # gas constant for water vapor (J kg-1 K-1)
     Rw = 461.5
 
-    if ( z_ground*TMPS*RH2M*prss == 0 ):
-
-        # reference pressure (Pa)
-        P0 = 1011*100.0
- 
-        T0 = 25.8+273.15
-        RH0 = 25.8
-        z0 = 24.0
-
-    else:
-
-        # surface pressure (Pa)
-        P0 = prss*100.0
-
-        # surface temperature (K)
-        T0 = TMPS+273.15
-
-        # relative humidity at 2m (percentage)
-        RH0 = RH2M
-
-        # surface height (m)
-        z0 = z_ground
-
-    #print 'P0',P0
-    #print 'T0',T0
-    #print 'RH0',RH0
-    #print 'z0',z0
+    P0 = 1011*100.0
+    T0 = 25.8+273.15
+    RH0 = 25.8
+    z0 = 24.0
 
     Es0 = np.exp(21.4-(5351/T0))
     Q0 = RH0 / P0 * ( 0.622 * Es0 )
     Tv0 = T0 * ( 1 + 0.61*Q0)
 
-    # pressure (Pa)
     P = profile[:,0]*100.0
 
-    # temperature (deg C)
     T_idx = fields_list.index("TEMP") + 1
 
-    # temperature (K)
     T = profile[:,T_idx] + 273.15
 
-    # Saturation mixing ratio (hPa)
     Es = np.exp(21.4-(5351/T))
 
     # dry air density
@@ -68,13 +37,10 @@ def calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list):
 
     if 'SPHU' in fields_list:
 
-        # specific humidity in g/kg
         SPHU_idx = fields_list.index("SPHU") + 1
 
-        # specific humidity in kg/kg
         Q = profile[:,SPHU_idx]/1000.0
 
-	# relative humidity (in percentage)
         RH = (Q * P) / ( 0.622 * Es )
 
     else:
@@ -87,9 +53,8 @@ def calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list):
 
     # Mixture density, Eq. (3) http://www.engineeringtoolbox.com/density-air-d_680.html
     rho = rho_da * ( 1 + Q ) / ( 1 + Q * Rw / Rd )
-    # where Q is the specific humidity in kgkg-1
 
-    if 'HGTSa' in fields_list:
+    if 'HGTS' in fields_list:
 
         z_idx = fields_list.index("HGTS") + 1
 
@@ -97,56 +62,18 @@ def calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list):
 
     else:
 
-        m = np.min(np.where(P<P0))
-
-        # print 'm', m
-
-
-        l = m-1
-        
-        z=np.zeros(nlev)
-
-        # virtual temperature (Eq. 9 arl-224.pdf)
+        # Tv = T .* ( 1 + 0.61*min(1,Q))
         Tv = T * ( 1 + 0.61*Q)
 
-        if ( m > 0 ):
+        Tv01 = 0.5*(Tv0+Tv[0])
+        deltaz0 = np.log(P0/P[0]) *Rd *Tv01 / grav
+        z=np.zeros(nlev)
+        z[0] = z0 + deltaz0
 
-            # average virtual temperature
-            Tvl0 = 0.5*(Tv[l]+Tv0)
+        Tv12 = 0.5*(Tv[0:-1]+Tv[1:])
+        deltaz = np.log(P[0:-1]/P[1:]) *Rd *Tv12 / grav
 
-            # height increment (Eq.10 arl-224.pdf)
-            deltaz0 = np.log(P0/P[l]) *Rd *Tvl0 / grav
-
-            z[l] = z0 + deltaz0
-
-            # print 'z0,z[l],l',z0,z[l],l
-
-            Tv12 = 0.5*(Tv[0:l]+Tv[1:l+1])
-            # print 'Tv12',Tv12
-            deltaz = np.log(P[1:l+1]/P[0:l]) * Rd * Tv12 / grav
-
-            # print 'deltaz',deltaz
-
-            z[0:l] = z[l] + np.cumsum(deltaz[::-1])[::-1] 
-
-            # print 'z[0:l]',z[0:l+1]
-
-
-        # average virtual temperature
-        Tv0m = 0.5*(Tv0+Tv[m])
-
-        # height increment (Eq.10 arl-224.pdf)
-        deltaz0 = np.log(P0/P[m]) *Rd *Tv0m / grav
-
-
-        z[m] = z0 + deltaz0
-
-        Tv12 = 0.5*(Tv[m:-1]+Tv[m+1:])
-        deltaz = np.log(P[m:-1]/P[m+1:]) *Rd *Tv12 / grav
-
-        z[m+1:] = z[m] + np.cumsum(deltaz)
-
-    print 'z',z
+        z[1:] = z[0] + np.cumsum(deltaz)
 
     # W->E component of horizontal velocity (m/s)
     U_idx = fields_list.index("UWND") + 1
@@ -156,8 +83,9 @@ def calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list):
     V_idx = fields_list.index("VWND") + 1
     V = profile[:,V_idx]
 
-    # Return z (km), density (kg/m3) , P (hPa) , T (K) , specific humidity (kg/kg), WE vel (m/s) , SN vel (m/s) 
-    return z/1000.0, rho, P/100, T, Q, U, V 
+
+#	print(len(z),len(rho),len(P),len(T),len(RH),len(profile[:,10]))
+    return z/1000.0, rho, P/100, T, RH, U, V
 
 def write_atm(time_input):
     """create atmosperic profile for plumemom """
@@ -195,45 +123,19 @@ def write_atm(time_input):
         zground_idx = fields_list.index("SHGT") + 1
         print 'zground_idx',zground_idx
         values_list = line[idx_2d_fields_line+2].split()
-        z_ground = float(values_list[zground_idx])
+        z_ground = values_list[zground_idx]
         print 'z_ground',z_ground
 
     else:
 
         z_ground = 0.0
 
-    if 'TMPS' in fields_list:
-  
-        TMPS_idx = fields_list.index("TMPS") + 1
-        print 'tmps_idx',TMPS_idx
-        values_list = line[idx_2d_fields_line+2].split()
-        TMPS = float(values_list[TMPS_idx])
-        print 'tmps',TMPS
-
-    else:
-
-        TMPS = 0.0
-
-
-    if 'RH2M' in fields_list:
-  
-        RH2M_idx = fields_list.index("RH2M") + 1
-        print 'RH2M_idx',RH2M_idx
-        values_list = line[idx_2d_fields_line+2].split()
-        RH2M = float(values_list[RH2M_idx])
-        print 'RH2M',RH2M
-
-    else:
-
-        RH2M = 0.0
-
-
     if 'PRSS' in fields_list:
   
         prss_idx = fields_list.index("PRSS") + 1
         print 'prss_idx',prss_idx
         values_list = line[idx_2d_fields_line+2].split()
-        prss = float(values_list[prss_idx])
+        prss = values_list[prss_idx]
         print 'prss',prss
 
     else:
@@ -288,7 +190,7 @@ def write_atm(time_input):
     profile = np.asarray(b[0:nfull,:])
 
     # compute the missing fields
-    a = calc_atm(profile,z_ground,TMPS,RH2M,prss,fields_list)
+    a = calc_atm(profile,fields_list)
     a = np.asarray(a)
 
     if ( z_ground == 0.0 and prss > 0):

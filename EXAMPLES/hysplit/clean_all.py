@@ -23,28 +23,7 @@ filelist = glob.glob('profile*')
 for f in filelist:
     os.remove(f)
 
-filelist = glob.glob('PARDUMP*')
-for f in filelist:
-    os.remove(f)
-
-filelist = glob.glob('MESSAGE*')
-for f in filelist:
-    os.remove(f)
-
 filelist = glob.glob('*.CFG')
-for f in filelist:
-        os.remove(f)
-
-filelist = glob.glob('*.txt')
-for f in filelist:
-        os.remove(f)
-
-filelist = glob.glob('*part')
-for f in filelist:
-        os.remove(f)
-
-
-filelist = glob.glob('*gas')
 for f in filelist:
         os.remove(f)
 
@@ -75,7 +54,7 @@ filelist = glob.glob('sample_dep*')
 for f in filelist:
     os.remove(f)
 
-filelist = [ 'PARDUMP' , 'WARNING' , 'STARTUP' , 'VMSDIST', 'con2stn.txt' , 'plume_model.temp1' , 'plume_model.temp2']
+filelist = [ 'EMITIMES' , 'MESSAGE' , 'PARDUMP' , 'WARNING' , 'CONTROL' , 'STARTUP' , 'VMSDIST', 'con2stn.txt', 'PARDUMP.txt']
 
 for f in filelist:
     try:

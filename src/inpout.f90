@@ -21,19 +21,14 @@ MODULE inpout
          diam2 , rho2 , cp_part , settling_model , distribution ,               &
          distribution_variable , solid_mass_fraction , shape_factor
 
-    USE particles_module, ONLY : aggregation_flag
-    
     USE meteo_module, ONLY: gt , gs , p0 , t0 , h1 , h2 , u_atm0 , duatm_dz0 ,  &
          visc_atm0 , rair , cpair , read_atm_profile , u_r , z_r , exp_wind ,   &
-         wind_mult_coeff ,rwv
+         wind_mult_coeff
 
     USE solver_module, ONLY: ds0
 
-    USE mixture_module, ONLY: tp0 , water_mass_fraction0 , initial_neutral_density
-
-    USE mixture_module, ONLY: n_gas , rvolcgas , cpvolcgas , rvolcgas_mix ,     &
-         volcgas_mass_fraction , volcgas_mix_mass_fraction , cpvolcgas_mix ,    &
-         rhovolcgas_mix , volcgas_mol_wt , rhovolcgas , volcgas_mass_fraction0
+    USE mixture_module, ONLY: tp0 , gas_mass_fraction0 , rwvapour , cpwvapour , &
+         initial_neutral_density
 
   IMPLICIT NONE
 
@@ -55,19 +50,12 @@ MODULE inpout
   !> Name of output file for hysplit
   CHARACTER(LEN=30) :: hy_file
 
-  !> Name of output file for hysplit volcanic gas
-  CHARACTER(LEN=30) :: hy_file_volcgas
-
   !> Name of output file for backup of input parameters
   CHARACTER(LEN=30) :: mom_file
 
   !> Name of output file for the variables used by dakota
   CHARACTER(LEN=30) :: dak_file
 
-  !> Name of output file for the inversion variables
-  CHARACTER(LEN=30) :: inversion_file
-
-  
   !> Name of output file for the parameters of the beta distribution
   CHARACTER(LEN=30) :: mat_file
 
@@ -99,10 +87,6 @@ MODULE inpout
 
   INTEGER :: col_lines
 
-  !> hysplit volcanic gas data unit
-
-  INTEGER :: hy_unit_volcgas
-
   !> hysplit scratch unit
   INTEGER :: temp_unit
 
@@ -112,10 +96,6 @@ MODULE inpout
   !> Dakota variables data unit
   INTEGER :: dak_unit
 
-  !> Inversion variables data unit
-  INTEGER :: inversion_unit
-
-  
   REAL*8, ALLOCATABLE :: mu_lognormal(:) , sigma_lognormal(:)
 
   REAL*8 :: month
@@ -127,10 +107,10 @@ MODULE inpout
         solid_mfr_oldold(:)
 
   NAMELIST / control_parameters / run_name , verbose_level , dakota_flag ,      &
-        inversion_flag , hysplit_flag , aggregation_flag
+        inversion_flag , hysplit_flag
 
-  NAMELIST / inversion_parameters / height_obj , r_min , r_max , n_values ,     &
-       w_min , w_max
+  NAMELIST / inversion_parameters / height_weight , height_obj , mu_weight ,    &
+       mu_obj , sigma_weight , sigma_obj , skew_weight , skew_obj
   
   NAMELIST / plume_parameters / alpha_inp , beta_inp , particles_loss
   
@@ -142,14 +122,14 @@ MODULE inpout
   
   NAMELIST / table_atm_parameters / month , lat , u_r , z_r , exp_wind
 
-  NAMELIST / initial_values / r0 , w0 , log10_mfr , tp0 ,                       &
-       initial_neutral_density , water_mass_fraction0 , vent_height , ds0 ,     &
-       n_part , n_gas , distribution , distribution_variable , n_mom
+  NAMELIST / initial_values / r0 , w0 , log10_mfr , tp0 ,                        &
+       initial_neutral_density , gas_mass_fraction0 , vent_height , ds0 ,       &
+       n_part , distribution , distribution_variable , n_mom
  
   NAMELIST / hysplit_parameters / hy_deltaz , nbl_stop , n_cloud
  
   NAMELIST / mixture_parameters / diam1 , rho1 , diam2 , rho2 , cp_part ,       &
-       rvolcgas , cpvolcgas , volcgas_mol_wt , volcgas_mass_fraction0
+       rwvapour , cpwvapour
   
   NAMELIST / lognormal_parameters / solid_partial_mass_fraction ,               &
        mu_lognormal , sigma_lognormal
@@ -186,11 +166,7 @@ CONTAINS
 
     WIND_MULT_COEFF = 1.D0
 
-    R0 = -1.D0 
-    W0 = -1.D0
-    Log10_mfr = -1.D0
-       
-    
+
     n_unit = 10
 
     inp_file = 'plume_model.inp'
@@ -210,16 +186,17 @@ CONTAINS
        dakota_flag = .FALSE.
        hysplit_flag = .FALSE.
        inversion_flag = .FALSE.
-       aggregation_flag = .FALSE.
 
        !---------- parameters of the INERSION_PARAMETERS namelist ------------------
+       height_weight = 0.D0
        height_obj = 0.D0
-       r_min = 1.D0
-       r_max = 500.D0
-       w_min = 1.D0
-       w_max = 1000.D0
-       n_values = 20
-       
+       mu_weight = 0.D0
+       mu_obj = 0.D0 
+       sigma_weight = 0.D0 
+       sigma_obj = 0.D0
+       skew_weight = 0.D0
+       skew_obj = 0.D0
+
        !---------- parameters of the PLUME_PARAMETERS namelist ---------------------
        alpha_inp = 9.0D-2
        beta_inp = 0.6D0
@@ -244,44 +221,34 @@ CONTAINS
        u_atm0 = 0.D0
        duatm_dz0 = 0.D0
 
-       !---------- parameters of the INITIAL_VALUES namelist --------------------
+       !---------- parameters of the INITIAL_VALUES namelist -----------------------
 
        R0 = 0.D0 
        W0 = 0.D0
        Log10_mfr = -1.0
        TP0 = 1273.D0
        INITIAL_NEUTRAL_DENSITY = .FALSE.
-       WATER_MASS_FRACTION0 = 3.0D-2
+       GAS_MASS_FRACTION0 = 3.0D-2
        VENT_HEIGHT =  1500.D0
        DS0 =  5.D0
        N_PART = 1
        DISTRIBUTION = 'lognormal'
        DISTRIBUTION_VARIABLE = 'particles_number'
        N_MOM = 6
-       n_gas = 1
-       ALLOCATE ( rvolcgas(n_gas) , cpvolcgas(n_gas) , volcgas_mol_wt(n_gas) ,  &
-            volcgas_mass_fraction(n_gas) , volcgas_mass_fraction0(n_gas) ,      &
-            rhovolcgas(n_gas) )
 
        CALL allocate_particles
 
-       !---------- parameters of the MIXTURE_PARAMETERS namelist ----------------
+       !---------- parameters of the MIXTURE_PARAMETERS namelist -------------------
 
        DIAM1 = 8.D-6
        RHO1 = 2000.D0
        DIAM2 = 2.D-3
        RHO2 = 2600.D0
        CP_PART = 1100.D0
+       RWVAPOUR = 462.D0
+       CPWVAPOUR = 1810.D0
 
-       rvolcgas(1) = 462.D0
-       cpvolcgas(1) = 1810.0
-       volcgas_mass_fraction0(1) = 1.D0
-       volcgas_mol_wt(1) = 0.018D0
-
-       rvolcgas_mix = volcgas_mass_fraction0(1) * rvolcgas(1)
-       cpvolcgas_mix = volcgas_mass_fraction0(1) * cpvolcgas(1)
-
-       !---------- parameters of the LOGNORMAL_PARAMETERS namelist --------------
+       !---------- parameters of the LOGNORMAL_PARAMETERS namelist -----------------
 
        ALLOCATE( mu_lognormal(n_part) )
        ALLOCATE( sigma_lognormal(n_part) )
@@ -330,8 +297,7 @@ CONTAINS
 
     USE moments_module, ONLY : n_nodes
 
-    USE mixture_module, ONLY: water_volume_fraction0 , rgasmix , gas_mass_fraction, &
-         water_vapor_mass_fraction , liquid_water_mass_fraction , gas_volume_fraction
+    USE mixture_module, ONLY: gas_volume_fraction0 , rgasmix
 
     ! External procedures
 
@@ -340,8 +306,6 @@ CONTAINS
     USE meteo_module, ONLY : h_levels
 
     USE meteo_module, ONLY : rho_atm_month_lat , pres_atm_month_lat ,  temp_atm_month_lat
-
-    USE mixture_module, ONLY : eval_wv
 
     USE moments_module, ONLY : beta_function , wheeler_algorithm , coefficient
 
@@ -370,7 +334,6 @@ CONTAINS
 
     REAL*8 :: rho_solid_tot_avg
 
-    REAL*8 :: rhowv
     REAL*8 :: rho_gas
     REAL*8 :: rho_mix
 
@@ -414,11 +377,7 @@ CONTAINS
 
     REAL*8 :: coeff_lat
 
-    REAL*8 :: Rrhovolcgas_mix
-
     INTEGER :: io
-
-    INTEGER :: i_gas
 
     NAMELIST / beta_parameters / solid_partial_mass_fraction , p_beta , q_beta ,&
          d_max
@@ -426,11 +385,7 @@ CONTAINS
     NAMELIST / constant_parameters / solid_partial_mass_fraction ,              &
          diam_constant_phi
 
-    WRITE(*,*) 
-    WRITE(*,*) 'PlumeMoM (by M. de'' Michieli Vitturi)'
-    WRITE(*,*) 
-    WRITE(*,*) '*** Starting the run ***' 
-    WRITE(*,*)
+    WRITE(*,*) 'PLUME_MODEL: *** Starting the run ***' 
 
     n_unit = n_unit + 1
 
@@ -460,12 +415,6 @@ CONTAINS
        READ(inp_unit, inversion_parameters)
        WRITE(bak_unit, inversion_parameters)
 
-       write_flag = .FALSE.
-       
-    ELSE
-
-       write_flag = .TRUE.
-       
     END IF
 
     READ(inp_unit, plume_parameters)
@@ -681,6 +630,7 @@ CONTAINS
        END DO pres_read_levels_oct
 
        CLOSE(atm_unit)
+
 
 
        ! ----- READ TEMPERATURES -------
@@ -933,7 +883,8 @@ CONTAINS
        DO i = 1, n_atm_profile
 
           READ(inp_unit,*) atm_profile0(1:7,i)
-          
+
+
           atm_profile(1:7,i) = atm_profile0(1:7,i)
           ! convert from km to meters
           atm_profile(1,i) = atm_profile(1,i) * 1000.D0
@@ -964,11 +915,6 @@ CONTAINS
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read atm_parameters: done'
 
     READ(inp_unit, initial_values)
-
-    ALLOCATE ( rvolcgas(n_gas),cpvolcgas(n_gas),volcgas_mass_fraction(n_gas) ,  &
-         volcgas_mol_wt(n_gas) , rhovolcgas(n_gas) ,                            &
-         volcgas_mass_fraction0(n_gas))
-
     WRITE(bak_unit, initial_values)
 
     IF ( ( log10_mfr .LT. 0.d0 ) .AND. ( r0 .EQ. 0.d0 ) .AND. ( w0 .GT. 0.D0 ) ) THEN
@@ -1031,134 +977,7 @@ CONTAINS
 
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read initial_parameters: done'
 
-    rvolcgas(1:n_gas) = -1.D0
-    cpvolcgas(1:n_gas) = -1.D0
-    volcgas_mol_wt(1:n_gas) = -1.D0
-    volcgas_mass_fraction0(1:n_gas) = -1.D0
-    
     READ(inp_unit, mixture_parameters) 
-
-    IF ( ANY( rvolcgas(1:n_gas) ==-1.D0 ) ) THEN
-
-       WRITE(*,*) 'Error in namelist MIXTURE PARAMETERS'
-       WRITE(*,*) 'Please check the values of rvolcgas',rvolcgas(1:n_gas)
-       STOP
-       
-    END IF
-
-    IF ( ANY( cpvolcgas(1:n_gas) ==-1.D0 ) ) THEN
-
-       WRITE(*,*) 'Error in namelist MIXTURE PARAMETERS'
-       WRITE(*,*) 'Please check the values of cpvolcgas',cpvolcgas(1:n_gas)
-       STOP
-       
-    END IF
-
-    IF ( ANY( volcgas_mol_wt(1:n_gas) ==-1.D0 ) ) THEN
-
-       WRITE(*,*) 'Error in namelist MIXTURE PARAMETERS'
-       WRITE(*,*) 'Please check the values of rvolcgas',volcgas_mol_wt(1:n_gas)
-       STOP
-       
-    END IF
-
-    IF ( ANY( volcgas_mass_fraction0(1:n_gas) ==-1.D0 ) ) THEN
-
-       WRITE(*,*) 'Error in namelist MIXTURE PARAMETERS'
-       WRITE(*,*) 'Please check the values of rvolcgas',volcgas_mass_fraction0(1:n_gas)
-       STOP
-       
-    END IF
-
-    
-    IF ( ( SUM( volcgas_mass_fraction0(1:n_gas) ) + water_mass_fraction0 )      &
-         .GE. 1.D0 ) THEN
-
-       WRITE(*,*) 'WARNING: Sum of gas mass fractions :',                       &
-            SUM( volcgas_mass_fraction0(1:n_part) + water_mass_fraction0 )
-
-       !READ(*,*)
-
-    END IF
-    
-    rvolcgas_mix = 0.D0
-    cpvolcgas_mix = 0.D0
-    Rrhovolcgas_mix = 0.D0
-
-    CALL zmet
-
-    IF ( n_gas .GT. 0 ) THEN
-
-       DO i_gas = 1,n_gas
-          
-          rvolcgas_mix = rvolcgas_mix + volcgas_mass_fraction0(i_gas)              &
-               * rvolcgas(i_gas)
-          
-          cpvolcgas_mix = cpvolcgas_mix + volcgas_mass_fraction0(i_gas)            &
-               * cpvolcgas(i_gas)
-          
-          Rrhovolcgas_mix = Rrhovolcgas_mix + volcgas_mass_fraction0(i_gas)        &
-               / (  pa / ( rvolcgas(i_gas) * tp0 ) )
-          
-       END DO
-       
-       rvolcgas_mix = rvolcgas_mix / SUM( volcgas_mass_fraction0(1:n_gas) )
-       
-       cpvolcgas_mix = cpvolcgas_mix / SUM( volcgas_mass_fraction0(1:n_gas) )
-       
-       rhovolcgas_mix =  SUM(volcgas_mass_fraction0(1:n_gas)) / Rrhovolcgas_mix
-       
-       volcgas_mix_mass_fraction = SUM(volcgas_mass_fraction0(1:n_gas))
-    
-    ELSE
-
-       rvolcgas_mix = 0.D0
-       
-       cpvolcgas_mix = 0.D0
-       
-       rhovolcgas_mix =  0.D0
-       
-       volcgas_mix_mass_fraction = 0.D0
-    
-    END IF
-
-    IF ( verbose_level .GE. 1 ) THEN
-
-       WRITE(*,*) 'volcgas_mix_mass_fraction',volcgas_mix_mass_fraction
-
-    END IF
-
-    rhowv = pa / ( rwv * tp0 )
-
-    ! ---- We assume all volcanic H2O at the vent is water vapor 
-    water_vapor_mass_fraction = water_mass_fraction0
-
-    liquid_water_mass_fraction = 0.D0
-
-    gas_mass_fraction = water_vapor_mass_fraction + volcgas_mix_mass_fraction 
-
-    IF ( n_gas .GT. 0 ) THEN
-
-       rho_gas = gas_mass_fraction / (  water_vapor_mass_fraction / rhowv          &
-            + volcgas_mix_mass_fraction / rhovolcgas_mix )  
-       
-    ELSE
-
-       rho_gas = rhowv
-
-    END IF
-
-    IF ( verbose_level .GE. 1 ) THEN
-       
-       WRITE(*,*) 'rvolcgas_mix :', rvolcgas_mix
-       WRITE(*,*) 'cpvolcgas_mix :', cpvolcgas_mix
-       WRITE(*,*) 'rhovolcgas_mix :', rhovolcgas_mix
-       WRITE(*,*) 'rhowv :', rhowv
-       WRITE(*,*) 'rho_gas :', rho_gas 
-       !READ(*,*)
-       
-    END IF
-    
     WRITE(bak_unit, mixture_parameters) 
 
     IF ( verbose_level .GE. 1 ) WRITE(*,*) 'read mixture_parameters: done'
@@ -1187,8 +1006,8 @@ CONTAINS
        mu_bar = -log( 2.D0 ) * mu_lognormal
        sigma_bar = log( 2.D0 ) * sigma_lognormal
 
-       ! WRITE(*,*) 'mu_bar',mu_bar
-       ! WRITE(*,*) 'sigma_bar',sigma_bar
+       WRITE(*,*) 'mu_bar',mu_bar
+       WRITE(*,*) 'sigma_bar',sigma_bar
 
 
     ELSEIF ( distribution .EQ. 'constant' ) THEN
@@ -1222,9 +1041,9 @@ CONTAINS
 
     END IF
 
-    ! solid mass fractions in the mixture
-    solid_mass_fraction(1:n_part) = ( 1.d0 - water_mass_fraction0               &
-         - volcgas_mix_mass_fraction ) * solid_partial_mass_fraction(1:n_part)
+
+    solid_mass_fraction(1:n_part) = ( 1.d0 - gas_mass_fraction0 ) *             &
+          solid_partial_mass_fraction(1:n_part)
 
     ALLOCATE( xi(n_nodes) )
     ALLOCATE( wi(n_nodes) )
@@ -1296,6 +1115,19 @@ CONTAINS
 
        END DO
 
+       CALL zmet
+
+       IF ( initial_neutral_density ) THEN
+          
+          rgasmix = rair
+          
+       ELSE
+          
+          rgasmix = rwvapour
+          
+       END IF
+       
+       rho_gas = pa / ( rgasmix * tp0 )
 
        IF ( distribution .EQ. 'constant' ) THEN
 
@@ -1369,41 +1201,34 @@ CONTAINS
 
     IF ( initial_neutral_density ) THEN
 
-       ! CHECK AND CORRECT
-
        rho_mix = rho_atm
 
        solid_tot_volume_fraction0 = ( rho_mix - rho_gas ) /                     &
             ( rho_solid_tot_avg - rho_gas )
 
-       water_volume_fraction0 = 1.D0 - solid_tot_volume_fraction0
+       gas_volume_fraction0 = 1.D0 - solid_tot_volume_fraction0
 
-       water_mass_fraction0 =  water_volume_fraction0 * rho_gas / rho_mix
+       gas_mass_fraction0 =  gas_volume_fraction0 * rho_gas / rho_mix
 
     ELSE
 
-       gas_volume_fraction = rho_solid_tot_avg / ( rho_gas * ( 1.D0 /          &
-            gas_mass_fraction - 1.D0 ) + rho_solid_tot_avg )
+       gas_volume_fraction0 = rho_solid_tot_avg / ( rho_gas * ( 1.D0 /          &
+            gas_mass_fraction0 - 1.D0 ) + rho_solid_tot_avg )
 
-       solid_tot_volume_fraction0 = 1.D0 - gas_volume_fraction
+       solid_tot_volume_fraction0 = 1.D0 - gas_volume_fraction0
 
-       rho_mix = gas_volume_fraction * rho_gas + solid_tot_volume_fraction0    &
+       rho_mix = gas_volume_fraction0 * rho_gas + solid_tot_volume_fraction0    &
             * rho_solid_tot_avg
 
     END IF
 
     IF ( verbose_level .GE. 1 ) THEN
        
-       WRITE(*,*) 'gas_volume_fraction',gas_volume_fraction
+       WRITE(*,*) 'gas_volume_fraction0',gas_volume_fraction0
        WRITE(*,*) 'solid_tot_volume_fraction0',solid_tot_volume_fraction0
        WRITE(*,*) 'rho_gas',rho_gas
        WRITE(*,*) 'rho_mix',rho_mix
-
-       WRITE(*,*) 'gas_mass_fraction',gas_mass_fraction
-       WRITE(*,*) 'solid_mass_fractions',solid_mass_fraction(1:n_part)
-
-       WRITE(*,*) 1.D0 / ( gas_mass_fraction / rho_gas + SUM( solid_mass_fraction(1:n_part) /  rho_solid_avg(1:n_part) ) )
-
+       WRITE(*,*) 
        
     END IF
     
@@ -1438,7 +1263,7 @@ CONTAINS
           
        ELSEIF ( distribution_variable .EQ. 'mass_fraction' ) THEN
           
-          C0 = ( 1.D0 - water_mass_fraction0 ) / mom0(i_part,0) *                 &
+          C0 = ( 1.D0 - gas_mass_fraction0 ) / mom0(i_part,0) *                 &
                solid_partial_mass_fraction(i_part)
       
        END IF
@@ -1467,6 +1292,14 @@ CONTAINS
 
     END DO
 
+    gas_volume_fraction0 = 1.D0 - solid_tot_volume_fraction0
+
+    gas_mass_fraction0 = gas_volume_fraction0 * rho_gas / rho_mix
+
+    WRITE(*,*) 'solid volume fraction',solid_tot_volume_fraction0
+    WRITE(*,*) 'solid total mass_fraction', solid_tot_volume_fraction0 *        &
+         rho_solid_tot_avg / rho_mix
+
     IF ( verbose_level .GE. 1 ) THEN
 
        IF ( distribution_variable .EQ. 'particles_number' ) THEN
@@ -1480,11 +1313,11 @@ CONTAINS
           WRITE(*,*) 'solid_mass_fractions', mom0(1:n_part,0)
           
        END IF
-
-       WRITE(*,*) 'gas volume fraction', gas_volume_fraction
-       WRITE(*,*) 'gas mass fraction', gas_mass_fraction
        
     END IF
+    
+    WRITE(*,*) 'gas volume fraction', gas_volume_fraction0
+    WRITE(*,*) 'gas mass fraction', gas_mass_fraction0
 
     ! the parameters of the particles phases distributions are saved in a file 
     ! readable by Matlab
@@ -1500,8 +1333,7 @@ CONTAINS
        OPEN(mat_unit,file=mat_file,status='unknown')
        
        WRITE(mat_unit,*) 'n_part = ',n_part,';'
-       WRITE(mat_unit,*) 'n_gas = ',n_gas,';'
-       WRITE(mat_unit,*) 'gas_volume_fraction = ',gas_volume_fraction,';'
+       WRITE(mat_unit,*) 'gas_volume_fraction = ',gas_volume_fraction0,';'
        
        IF ( distribution .EQ. 'beta' ) THEN
           
@@ -1528,8 +1360,9 @@ CONTAINS
        WRITE(mat_unit,*) 'd2 = [',diam2(1:n_part),'];'
        WRITE(mat_unit,*) 'rho1 = [',rho1(1:n_part),'];'
        WRITE(mat_unit,*) 'rho2 = [',rho2(1:n_part),'];'
-              
-       IF ( verbose_level .GE. 1 ) WRITE(*,*) 'Write matlab file: done' 
+       
+       
+       IF ( verbose_level .GE. 0 ) WRITE(*,*) 'write matlab file: done' 
        
        CLOSE(mat_unit)
        
@@ -1607,7 +1440,7 @@ CONTAINS
           
           WRITE(bak_unit,107) atm_profile0(1:7,i)
   
-107 FORMAT(7(1x,es14.7))
+107 FORMAT(7(1x,e14.7))
 
         
        END DO
@@ -1645,9 +1478,7 @@ CONTAINS
     mom_file = TRIM(run_name)//'.mom'
     dak_file = TRIM(run_name)//'.dak' 
     hy_file = TRIM(run_name)//'.hy'
-    hy_file_volcgas = TRIM(run_name)//'_volcgas.hy'
-    inversion_file = TRIM(run_name)//'.inv'
-    
+
     IF ( .NOT.dakota_flag ) THEN
 
        n_unit = n_unit + 1
@@ -1680,19 +1511,6 @@ CONTAINS
 
     OPEN(dak_unit,FILE=dak_file)
 
-    IF ( inversion_flag ) THEN
-    
-       n_unit = n_unit + 1
-       inversion_unit = n_unit
-       
-       OPEN(inversion_unit,FILE=inversion_file)
-       WRITE(inversion_unit,187)
-187    FORMAT(1x,'      radius (m) ',1x,' velocity (m/s) ',1x,                  &
-            'MER (kg/s)     ',  1x,'plume height (m)',1x,                       &
-            ' inversion ',1x,'column regime')
-       
-    END IF
-    
     RETURN
     
   END SUBROUTINE open_file_units
@@ -1723,8 +1541,6 @@ CONTAINS
 
     CLOSE(dak_unit)
 
-    IF ( inversion_flag ) CLOSE ( inversion_unit )
-    
     RETURN
 
   END SUBROUTINE close_file_units
@@ -1747,11 +1563,8 @@ CONTAINS
          mom , set_mom
 
     USE plume_module, ONLY: x , y , z , w , r , mag_u
-
     USE mixture_module, ONLY: rho_mix , tp , atm_mass_fraction ,               &
-         volcgas_mix_mass_fraction , volcgas_mass_fraction,                    &
-         dry_air_mass_fraction , water_vapor_mass_fraction ,                   & 
-         liquid_water_mass_fraction
+         wvapour_mass_fraction
 
     ! USE plume_model, ONLY : gas_mass_fraction
 
@@ -1763,8 +1576,6 @@ CONTAINS
     REAL*8 :: mfr
 
     INTEGER :: i_part
-
-    INTEGER :: i_gas
 
     mfr = 3.14 * r**2 * rho_mix * mag_u
 
@@ -1782,43 +1593,38 @@ CONTAINS
           WRITE(col_unit,98,advance="no")
           
        END DO
-
-       DO i_gas=1,n_gas
-          
-          WRITE(col_unit,99,advance="no")
-          
-       END DO
        
-       WRITE(col_unit,100)
+       WRITE(col_unit,99)
        
-97     FORMAT(1x,'     z (m)     ',1x,'       r (m)    ',1x,'      x (m)    ',  &
-            1x,'     y (m)     ',1x,'mix.dens(kg/m3)',1x,'temperature(C)',      &
-            1x,' vert vel (m/s)',1x,' mag vel (m/s) ',1x,' d.a. massfract',     &
-            1x,' w.v. massfract',1x,' l.w. massfract',1x)
-
-
-98     FORMAT(1x,'sol massfract ')
-
-99     FORMAT(1x,'  volgas massf ')
+97     FORMAT(1x,'     z (m)     ',1x,'       r (m)    ',1x,'      x (m)    ',    &
+            1x,'     y (m)     ',1x,'mix.dens(kg/m3)',1x,'temperature(C)',         &
+            1x,' vert vel (m/s)',1x,' mag vel (m/s) ',1x,' atm.mass fract',         &
+            1x,' wv mass fract ',1x)
        
-100     FORMAT(1x,' volgasmix.massf',1x,'atm.rho(kg/m3)',1x,' MFR (kg/s)     ', &
-             1x,'atm.temp (K)  ', 1x,' atm pres (Pa) ')
+98     FORMAT(1x,'sol.mass fract ')
+       
+99     FORMAT(1x,'atm.rho(kg/m3)',1x,' MFR (kg/s)     ',1x,'atm.temp (K)  ',         &
+            1x,' atm pres (Pa) ')
        
 
     END IF
 
     col_lines = col_lines + 1
 
-    WRITE(col_unit,101) z , r , x , y , rho_mix , tp - 273.15D0 , w , mag_u,    &
-         dry_air_mass_fraction , water_vapor_mass_fraction ,                    & 
-         liquid_water_mass_fraction , solid_partial_mass_fraction(1:n_part) ,   &
-         volcgas_mass_fraction(1:n_gas) , volcgas_mix_mass_fraction , rho_atm , &
-         mfr , ta, pa
+    WRITE(col_unit,100) z , r , x , y , rho_mix , tp - 273.15D0 , w , mag_u,&
+         atm_mass_fraction , wvapour_mass_fraction ,                        &
+         solid_partial_mass_fraction(1:n_part) , rho_atm , mfr , ta, pa
 
+!********* format for plume models comparison ********************************
+!
+!    WRITE(col_unit,100) z , r , x , y , rho_mix , tp - 273.15D0 , w ,       &
+!         atm_mass_fraction , wvapour_mass_fraction ,                        &
+!         solid_partial_mass_fraction(1:n_part) * ( 1.D0 - gas_mass_fraction)&
+!         , rho_atm , mfr , ta
 
     WRITE(mom_unit,*) z , mom(1:n_part,0:n_mom-1),set_mom(1:n_part,0)
 
-101 FORMAT(33(1x,es15.8))
+100 FORMAT(33(1x,e15.8))
     
     IF ( verbose_level .GE. 1 ) THEN
        
@@ -1829,6 +1635,7 @@ CONTAINS
        WRITE(*,*) 'r',r
        WRITE(*,*) 'w',w
        WRITE(*,*) '******************'
+       READ(*,*)
        
     END IF
     
@@ -1855,7 +1662,6 @@ CONTAINS
     IMPLICIT NONE
 
     CHARACTER(20), INTENT(IN) :: description
-
     REAL*8, INTENT(IN) :: value
 
     WRITE(dak_unit,*) description,value
@@ -1869,21 +1675,7 @@ CONTAINS
     RETURN
 
   END SUBROUTINE write_dakota
-
-  SUBROUTINE write_inversion(r0,w_opt,opt_mfr,opt_height,search_flag, &
-            opt_regime)
-
-    REAL*8,INTENT(IN) :: r0,w_opt,opt_mfr,opt_height
-    LOGICAL,INTENT(IN) :: search_flag
-    INTEGER,INTENT(IN) :: opt_regime
-    
-    WRITE(inversion_unit,181) r0,w_opt,opt_mfr,opt_height,search_flag,opt_regime
-    
-181 FORMAT(2(2x,f15.8),1(1x,es15.8),1(1x,f15.6)4x,L,7x,I4)
-
-    
-
-  END SUBROUTINE write_inversion
+  
 
   SUBROUTINE check_hysplit
 
@@ -1895,11 +1687,8 @@ CONTAINS
          mom , set_mom
 
     USE plume_module, ONLY: x , y , z , w , r , mag_u
-
     USE mixture_module, ONLY: rho_mix , tp , atm_mass_fraction ,               &
-         volcgas_mix_mass_fraction , volcgas_mass_fraction,                    &
-         dry_air_mass_fraction , water_vapor_mass_fraction ,                   & 
-         liquid_water_mass_fraction
+         wvapour_mass_fraction
 
     USE variables, ONLY : height_nbl
 
@@ -1910,18 +1699,13 @@ CONTAINS
     INTEGER :: i , j , n_hy
 
     REAL*8 :: temp_k,mfr
-    REAL*8 :: da_mf,wv_mf,lw_mf,volcgas_tot_mf
     REAL*8, ALLOCATABLE :: x_col(:) , y_col(:) , z_col(:) , r_col(:) 
     REAL*8, ALLOCATABLE :: solid_pmf(:,:) , gas_mf(:) , mfr_col(:)
-    REAL*8, ALLOCATABLE :: volcgas_mf(:,:)
     REAL*8, ALLOCATABLE :: solid_mass_flux(:,:) , solid_mass_loss_cum(:,:)
-    REAL*8, ALLOCATABLE :: volcgas_mass_flux(:,:) 
     REAL*8 :: z_min , z_max , z_bot , z_top , x_top , x_bot , y_bot , y_top
     REAL*8 :: r_bot , r_top
     REAL*8 :: solid_bot , solid_top
-    REAL*8 :: gas_top
     REAL*8, ALLOCATABLE :: delta_solid(:) , cloud_solid(:)
-    REAL*8, ALLOCATABLE :: cloud_gas(:) 
     REAL*8, ALLOCATABLE :: solid_tot(:)
 
 
@@ -1934,12 +1718,9 @@ CONTAINS
     ALLOCATE( solid_pmf(n_part,col_lines) )
     ALLOCATE( gas_mf(col_lines) )
     ALLOCATE( mfr_col(col_lines) )
-    ALLOCATE( volcgas_mf(n_gas,col_lines) )
     ALLOCATE( solid_mass_flux(n_part,col_lines) )
     ALLOCATE( solid_mass_loss_cum(n_part,col_lines) )
-    ALLOCATE( volcgas_mass_flux(n_gas,col_lines) )
     ALLOCATE( delta_solid(n_part) , cloud_solid(n_part) ) 
-    ALLOCATE( cloud_gas(n_gas) ) 
     ALLOCATE( solid_tot(n_part) )
 
     n_unit = n_unit + 1
@@ -1949,24 +1730,15 @@ CONTAINS
 
     READ(read_col_unit,*)
 
-    ! WRITE(*,*) 'col_lines',col_lines
+    WRITE(*,*) 'col_lines',col_lines
 
     DO i = 1,col_lines
 
-       !READ(read_col_unit,111) z_col(i) , r_col(i) , x_col(i) , y_col(i) ,      &
-       !     rho_mix , temp_k , w , mag_u , atm_mass_fraction ,                  &
-       !     volcgas_mix_mass_fraction , solid_pmf(1:n_part,i) , rho_atm ,       &
-       !     mfr_col(i) , ta , pa
+       READ(read_col_unit,111) z_col(i) , r_col(i) , x_col(i) , y_col(i) , rho_mix ,   &
+            temp_k , w , mag_u , atm_mass_fraction , wvapour_mass_fraction ,    &
+            solid_pmf(1:n_part,i) , rho_atm , mfr_col(i) , ta , pa
 
-       READ(read_col_unit,111) z_col(i) , r_col(i) , x_col(i) , y_col(i) ,     &
-	    rho_mix , temp_k , w , mag_u, da_mf , wv_mf , lw_mf ,              &
-            solid_pmf(1:n_part,i) , volcgas_mf(1:n_gas,i), volcgas_tot_mf,     &
-            rho_atm , mfr_col(i) , ta, pa
-
-
-       !gas_mf(i) = atm_mass_fraction + volcgas_mix_mass_fraction
-       gas_mf(i) = da_mf + wv_mf + volcgas_tot_mf
-
+       gas_mf(i) = atm_mass_fraction + wvapour_mass_fraction
 
        solid_mass_flux(1:n_part,i) =  solid_pmf(1:n_part,i) * (1.D0-gas_mf(i))  &
             * rho_mix * pi_g * r_col(i)**2 * mag_u
@@ -1974,19 +1746,12 @@ CONTAINS
        solid_mass_loss_cum(1:n_part,i) = 1.D0 -  solid_mass_flux(1:n_part,i) /  &
             solid_mass_flux(1:n_part,1)
 
-       volcgas_mass_flux(1:n_gas,i) = volcgas_mf(1:n_gas,i)                     &
-            *rho_mix * pi_g * r_col(i)**2 * mag_u 
-
-       !WRITE(*,*) 'Solid mass in the column (kg): ',solid_mass_flux(1:n_part,i)
-
        ! WRITE(*,*) z_col(i) , solid_mass_loss_cum(1:n_part,i)
        ! READ(*,*)
-        !WRITE(*,*) 'volcgas_mass_flux ',volcgas_mass_flux(1:n_gas,i), z_col(i)
-       !READ(*,*)
 
     END DO
 
-111 FORMAT(33(1x,es15.8))
+111 FORMAT(33(1x,e15.8))
 
     CLOSE(read_col_unit)    
     
@@ -2002,6 +1767,7 @@ CONTAINS
        
     END DO
     
+
     WRITE(hy_unit,*) ''
 
     z_min = z_col(1)
@@ -2022,14 +1788,10 @@ CONTAINS
     n_hy = FLOOR( ( z_max - z_min ) / hy_deltaz )
 
     solid_tot(1:n_part) = 0.D0
-
-    WRITE(*,*) 'Solid mass released in the atmosphere at z_min (kg): ',z_min,SUM(solid_tot)
-
+    WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',z_min,SUM(solid_tot)
 
     DO i = 1,n_hy
 
-
-   
        z_bot = z_min + (i-1) * hy_deltaz
        z_top = z_min + i * hy_deltaz
 
@@ -2055,7 +1817,7 @@ CONTAINS
           
           delta_solid(j) = solid_bot - solid_top
 
-         
+          ! WRITE(*,*) 'solid_bot,solit_top',j,solid_bot,solid_top
 
        END DO
 
@@ -2114,8 +1876,7 @@ CONTAINS
        END IF
        
        solid_tot(1:n_part) = solid_tot(1:n_part) + delta_solid(1:n_part)
-       !WRITE(*,*) 'Solid mass released in the atmosphere (kg): ', 0.5D0 * ( z_top + z_bot ) , SUM(solid_tot)
-       !READ(*,*)
+       ! WRITE(*,*) 'Solid mass released in the atmosphere (kg): ', 0.5D0 * ( z_top + z_bot ) , SUM(solid_tot)
 
     END DO
 
@@ -2141,15 +1902,12 @@ CONTAINS
 
     END DO
 
-    WRITE(*,*) 'cloud_solid(j) : ',solid_top
-
     solid_tot(1:n_part) = solid_tot(1:n_part) + delta_solid(1:n_part)
 
+    ! WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',SUM(solid_tot)
 
-
-     !READ(*,*)
     solid_tot(1:n_part) = solid_tot(1:n_part) + cloud_solid(1:n_part)
-     WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',SUM(solid_tot)
+
  
     ! WRITE(*,*) 'n_cloud',n_cloud
 
@@ -2255,134 +2013,6 @@ CONTAINS
 108 FORMAT(2x,A)
     
 110 FORMAT(33(1x,e15.8))
-
-
-    ! Write hysplit file for volcanig gas only
-
-    OPEN(hy_unit_volcgas,FILE=hy_file_volcgas)
-    
-    WRITE(hy_unit_volcgas,207,advance="no")
-    
-    DO i=1,n_gas
-       
-       WRITE(x1,'(I2.2)') i ! converting integer to string using a 'internal file'
-       
-       WRITE(hy_unit_volcgas,208,advance="no") 'VG fr '//trim(x1)//' (kg/s)'
-       
-    END DO
-
-
-    WRITE(hy_unit_volcgas,*) ''
-
-    z_min = z_col(1)
-
-    IF ( nbl_stop ) THEN
-
-       z_max = height_nbl + z_min
-
-    ELSE
-
-       z_max = z_col(col_lines)
-       
-    END IF
-
-  
-    ! WRITE(*,*) 'z_min',z_min
-  
-    n_hy = FLOOR( ( z_max - z_min ) / hy_deltaz )
-
-    
-
-    !WRITE(*,*) 'Solid mass released in the atmosphere (kg): ',z_min,SUM(solid_tot)
-
-
-    z_bot = z_min + n_hy * hy_deltaz
-    z_top = z_max
-
-    !WRITE(*,*) 'volcgas_mass_flux : ',volcgas_mass_flux(n_gas,:)
-    DO j = 1,n_gas
-       
-
-       CALL interp_1d_scalar(z_col, volcgas_mass_flux(j,:), z_top, gas_top)
-
-       CALL interp_1d_scalar(z_col, x_col, z_bot, x_bot)
-       CALL interp_1d_scalar(z_col, x_col, z_top, x_top)
-       
-       CALL interp_1d_scalar(z_col, x_col, z_bot, y_bot)
-       CALL interp_1d_scalar(z_col, x_col, z_top, y_top)
-              
-       CALL interp_1d_scalar(z_col, r_col, z_bot, r_bot)
-       CALL interp_1d_scalar(z_col, r_col, z_top, r_top)
-          
-       
-       cloud_gas(j) = gas_top
-
-    END DO
-  
-    WRITE(*,*) 'cloud_gas(j) : ',gas_top
-    WRITE(*,*) 'cloud_gas(1:n_gas) : ',cloud_gas(1:n_gas)
-
-
-    IF ( n_cloud .EQ. 1 ) THEN
-
-       IF ( verbose_level .GE. 1 ) THEN
-          
-          WRITE(*,210) x_top , y_top , z_top , cloud_gas(1:n_gas)
-          
-       END IF
-       
-       WRITE(hy_unit_volcgas,210) x_top , y_top , z_top , cloud_gas(1:n_gas)
-       
-    ELSE
-       
-       IF ( u_atm .LT. 1.0D-1 ) THEN
-          
-          delta_angle = 2.D0*pi_g/n_cloud
-          
-       ELSE
-          
-          delta_angle = pi_g / ( n_cloud - 1.D0 )
-          
-       END IF
-              
-       DO i=1,n_cloud
-          
-          start_angle =  DATAN2(sin_theta,cos_theta)
-          angle_release = (i-1) * delta_angle - 0.5D0*pi_g
-          
-          dx = 0.5* ( r_bot + r_top ) * DCOS(start_angle + angle_release)
-          dy = 0.5* ( r_bot + r_top ) * DSIN(start_angle + angle_release)
-          
-          
-          IF ( verbose_level .GE. 1 ) THEN
-
-             WRITE(*,210) x_top+dx , y_top+dy , z_top , cloud_gas(1:n_gas)/n_cloud
-             
-          END IF
-          
-          WRITE(hy_unit_volcgas,210) x_top+dx , y_top+dy , z_top , cloud_gas(1:n_gas)/n_cloud
-          
-       END DO
-
-    END IF
-
-
-    ! WRITE(*,*) 'z_max',z_max
-    !WRITE(*,*) 'Gas mass released in the atmosphere (kg): ',SUM(solid_tot)
-
-
-
-207 FORMAT(1x,'     x (m)     ',1x,'      y (m)    ', 1x,'     z (m)     ')
-    
-208 FORMAT(2x,A)
-    
-210 FORMAT(33(1x,e15.8))
-
-
-
-
-
-
 
 
   END SUBROUTINE check_hysplit

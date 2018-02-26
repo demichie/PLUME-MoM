@@ -29,16 +29,10 @@ PROGRAM plume_model
   
   USE inpout, ONLY: open_file_units , close_file_units
 
-  USE inversion, ONLY: invert_height
-  
-  USE rise, ONLY: plumerise 
+  USE rise, ONLY: plumerise
 
-  
   USE solver_module, ONLY: allocate_matrix
-
-  USE variables, ONLY: hysplit_flag , inversion_flag
-
- 
+  
   IMPLICIT NONE
  
   REAL*8 :: t1 , t2
@@ -61,22 +55,13 @@ PROGRAM plume_model
   !***  Allocate varaibles for the colum model
   !
   CALL allocate_matrix
-
-  IF ( inversion_flag ) THEN
-     
-     !***  Solve the plume model
-     CALL invert_height
-
-  ELSE
-
-     !***  Solve the plume model
-     CALL plumerise
-
-  END IF
-    
+  
+  !***  Solve the plume model
+  CALL plumerise
+  
   CALL close_file_units
 
-  IF ( hysplit_flag ) CALL check_hysplit
+  CALL check_hysplit
   
   CALL cpu_time(t2)
 

@@ -40,9 +40,6 @@ MODULE particles_module
   !> Moments of the densities times the settling velocities
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: set_rhop_mom
 
-  !> Moments of the heat capacities 
-  REAL*8, ALLOCATABLE, DIMENSION(:,:) :: cp_mom 
-
   !> Moments of the heat capacities times the densities
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: cp_rhop_mom 
 
@@ -75,8 +72,6 @@ MODULE particles_module
 
   REAL*8, ALLOCATABLE :: cp_part(:)
 
-  REAL*8 :: cpsolid
-
   !> Initial (at the base) moments of the particles diameter
   REAL*8, DIMENSION(1:50,0:100) :: mom0
 
@@ -98,7 +93,7 @@ MODULE particles_module
   !> Flag for the aggregation:\n
   !> - 'TRUE'   => aggregation enabled
   !> - 'FALSE'  => aggregation disabled
-  LOGICAL :: aggregation_flag
+  LOGICAL :: aggregation
 
   SAVE
 
@@ -132,7 +127,6 @@ CONTAINS
     ALLOCATE ( set_cp_rhop_mom(1:n_part,0:n_mom-1) )
     ALLOCATE ( set_cp_mom(1:n_part,0:n_mom-1) )
     ALLOCATE ( cp_rhop_mom(1:n_part,0:n_mom-1) )
-    ALLOCATE ( cp_mom(1:n_part,0:n_mom-1) )
     ALLOCATE ( birth_term(1:n_part,0:n_mom-1) )
     ALLOCATE ( death_term(1:n_part,0:n_mom-1) )
 
@@ -292,23 +286,23 @@ CONTAINS
 
           k1 = 1.19D5   ! (m^2 kg^-1 s^-1 )
 
-          particles_settling_velocity = k1 * rhop * DSQRT( rho_atm0 / rho_atm ) &
-               * ( 0.5D0 * diam )**2
+          particles_settling_velocity = k1 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
+               ( 0.5D0 * diam )**2
 
        ELSEIF ( diam .LE. 1.D-3 ) THEN
 
           k2 = 8.D0    ! (m^3 kg^-1 s^-1 )
 
-          particles_settling_velocity = k2 * rhop * DSQRT( rho_atm0 / rho_atm ) &
-               * ( 0.5D0 * diam )
+          particles_settling_velocity = k2 * rhop * SQRT( rho_atm0 / rho_atm ) *   &
+               ( 0.5D0 * diam )
 
        ELSE 
 
           k3 = 4.833D0 ! (m^2 kg^-0.5 s^-1 )
           CD = 0.75D0
 
-          particles_settling_velocity = k3 * DSQRT( rhop / CD )                 &
-               * DSQRT(  rho_atm0 / rho_atm ) * DSQRT( 0.5D0 * diam )
+          particles_settling_velocity = k3 * SQRT( rhop / CD ) * SQRT(  rho_atm0   &
+               / rho_atm ) * SQRT( 0.5D0 * diam )
 
        END IF
 
@@ -341,7 +335,6 @@ CONTAINS
        ENDDO
 
        particles_settling_velocity = Vg_Ganser
-
        IF ( Vg_Ganser .LE. 0.D0 ) THEN
 
           WRITE(*,*) 'NEGATIVE VALUE', Vinit,Vg_Ganser
@@ -420,10 +413,8 @@ CONTAINS
 
        ELSEIF ( ( Rey2 .GT. 100.D0 ) .AND. ( Rey2 .LE. 1000.D0 ) ) THEN 
 
-          Cd_interp = Cd_100 + ( Rey2 - 100 ) / ( 1000 - 100 )                  &
-               * ( Cd_1000 - Cd_100)
-
-          Us = DSQRT( 2.D0 * mass * gi / ( Cd_interp * rho_atm * A_cs ) )
+          Cd_interp = Cd_100 + ( Rey2 - 100 ) / ( 1000 - 100 ) * ( Cd_1000 - Cd_100)
+          Us = sqrt( 2 * mass * gi / ( Cd_interp * rho_atm * A_cs ) )
 
        ELSEIF ( Rey2 .GT. 1000.D0 ) THEN
 
@@ -439,6 +430,9 @@ CONTAINS
        STOP
 
     END IF
+
+    !WRITE(*,*) 'diam,Us',diam,Us
+    !READ(*,*)
 
   END FUNCTION particles_settling_velocity
 
@@ -677,8 +671,7 @@ CONTAINS
 
     k_b =1.3806488D-23 
 
-    beta_B = 2.D0 / 3.D0 * k_b * tp / visc_atm * ( diam1 + diam2 )**2           &
-         / ( diam1*diam2 ) 
+    beta_B = 2.D0 / 3.D0 * k_b * tp / visc_atm * ( diam1 + diam2 )**2 / ( diam1*diam2 ) 
 
     Gamma_s = DSQRT( 1.3D0 * epsilon * air_kin_viscosity )
 
@@ -891,7 +884,7 @@ CONTAINS
 
           part_cp_array(i_part,j) = particles_heat_capacity( i_part,xi(i_part,j))  
 
-          IF ( aggregation_flag ) THEN
+          IF ( aggregation) THEN
 
              DO j2=1,n_nodes
 
@@ -928,9 +921,6 @@ CONTAINS
           rhop_mom(i_part,i) = SUM( part_dens_array(i_part,:) * w(i_part,:)     &
                * xi(i_part,:)**i ) / mom(i_part,i)
 
-          cp_mom(i_part,i) = SUM( part_cp_array(i_part,:) * w(i_part,:)         &
-               * xi(i_part,:)**i ) / mom(i_part,i) 
-
           cp_rhop_mom(i_part,i) = SUM( part_cp_array(i_part,:)                  &
                * part_dens_array(i_part,:) * w(i_part,:) * xi(i_part,:)**i )    &
                / mom(i_part,i) 
@@ -947,7 +937,7 @@ CONTAINS
                * part_cp_array(i_part,:) * w(i_part,:) * xi(i_part,:)**i )      &
                / mom(i_part,i) 
 
-          IF ( aggregation_flag ) THEN
+          IF ( aggregation ) THEN
 
              birth_term(i_part,i) = 0.D0
              death_term(i_part,i) = 0.D0
